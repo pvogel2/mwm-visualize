@@ -1,0 +1,20 @@
+{
+  "name": "codevis",
+  "version": "1.0.0",
+  "description": "nodejs app for visualizing javascript code.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "file:///C:\\\\Users\\\\worker\\\\Documents\\\\gitrepository\\\\codevis"
+  },
+  "author": "Peter Vogel",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^5.4.1",
+    "express": "^4.16.2",
+    "three": "^0.89.0"
+  }
+}
