@@ -18,9 +18,11 @@ function loadAst() {
 };
 
 function walkAst(ast) {
-  var w = new MWM.walker();
-
-  window.acorn.walk.recursive(ast, {}, w.functions);
-
+  //var w = new Walker();
+  var state = new THREE.Group();
+  state.name = 'File';
+  window.acorn.walk.recursive(ast, state, Walker);
+  console.log(state);
+  renderer.addObject('File', state);
   renderer.start();
 }
