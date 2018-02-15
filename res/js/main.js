@@ -44,8 +44,8 @@ function walkAst(ast) {
       if(frustum.containsPoint( vector )){
         vector.project(renderer.three.camera);
 
-        vector.x = ( vector.x * widthHalf ) + widthHalf + 20;
-        vector.y = - ( vector.y * heightHalf ) + heightHalf + 5;
+        vector.x = ( vector.x * widthHalf ) + widthHalf + 10;
+        vector.y = - ( vector.y * heightHalf ) + heightHalf - 3;
 
         div.style.top = `${Math.floor(vector.y)}px`;
         div.style.left = `${Math.floor(vector.x)}px`;

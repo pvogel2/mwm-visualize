@@ -1,0 +1,19 @@
+.nowrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#threejs-container {
+  position: relative;	
+}
+
+.walker.label {
+  position: absolute;
+  font-weight: 200;
+  color: #fff;
+  font-size: 70%;
+  border: 1px solid lightgrey;
+  background: grey;
+  padding: 2px;
+}
