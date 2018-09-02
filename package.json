@@ -1,5 +1,5 @@
 {
-  "name": "codevis",
+  "name": "mwm-visualize",
   "version": "0.0.1",
   "description": "nodejs app for visualizing javascript code.",
   "main": "index.js",
@@ -13,8 +13,14 @@
   "author": "Peter Vogel",
   "license": "MIT",
   "dependencies": {
-    "acorn": "^5.4.1",
-    "express": "^4.16.2",
-    "three": "^0.89.0"
+    "acorn": "5",
+    "express": "4",
+    "material-components-web": "*",
+    "mwm-renderer": "*",
+    "three": "^0.92.0",
+    "shapefile": "*",
+    "csvtojson": "*",
+    "node-dbf": "../node-dbf",
+    "mongodb": "*"
   }
 }

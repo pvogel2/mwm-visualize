@@ -7,11 +7,8 @@
     <script src="/res/js/mdc/material-components-web.js"></script>
     <script src="/res/js/three/build/three.js"></script>
     <script src="/res/js/three/examples/js/controls/OrbitControls.js"></script>
-    <script src="/res/js/acorn/dist/acorn.js"></script>
-    <script src="/res/js/acorn/dist/walk.js"></script>
     <script src="/res/js/mwm/bundle.js"></script>
-    <script src="/res/js/assets/walker.js"></script>
-    <script src="/res/js/assets/main.js"></script>
+    <script src="/res/js/assets/anim.js"></script>
   </head>
   <body>
     <script id="vertexshader" type="x-shader/x-vertex">
@@ -46,34 +43,34 @@
         gl_FragColor = vec4( coreColor * inputSample.xyz, inputSample.a*(1.0-l) );
       }
   </script>
-	<header class="mdc-top-app-bar mdc-top-app-bar--fixed" data-mdc-auto-init="MDCTopAppBar">
-	  <div class="mdc-top-app-bar__row">
-	    <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
-	      <a href="#" class="material-icons mdc-top-app-bar__navigation-icon">menu</a>
-	      <span class="mdc-top-app-bar__title">CodeVIS</span>
-	    </section>
-	  </div>
-	</header>
-	<div class="mdc-layout-grid" style="padding-top:90px">
-	  <div class="mdc-layout-grid__inner">
-	    <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-12">
+  <header class="mdc-top-app-bar mdc-top-app-bar--fixed" data-mdc-auto-init="MDCTopAppBar">
+    <div class="mdc-top-app-bar__row">
+      <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+        <a href="#" class="material-icons mdc-top-app-bar__navigation-icon">menu</a>
+        <span class="mdc-top-app-bar__title">Animation Test</span>
+      </section>
+    </div>
+  </header>
+  <div class="mdc-layout-grid" style="padding-top:90px">
+    <div class="mdc-layout-grid__inner">
+      <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-12">
         <div id="threejs-container" class="mdc-card mdc-card__media mdc-card__media--16-9">
-				  <div class="mwm-loading">
-				    <div role="progressbar" class="mdc-linear-progress mdc-linear-progress--indeterminate" data-mdc-auto-init="MDCLinearProgress">
-				      <div class="mdc-linear-progress__buffering-dots"></div>
-				      <div class="mdc-linear-progress__buffer"></div>
-				      <div class="mdc-linear-progress__bar mdc-linear-progress__primary-bar">
-				        <span class="mdc-linear-progress__bar-inner"></span>
-				      </div>
-				      <div class="mdc-linear-progress__bar mdc-linear-progress__secondary-bar">
-				        <span class="mdc-linear-progress__bar-inner"></span>
-				      </div>
-				    </div>
-				  </div>
+          <div class="mwm-loading">
+            <div role="progressbar" class="mdc-linear-progress mdc-linear-progress--indeterminate" data-mdc-auto-init="MDCLinearProgress">
+              <div class="mdc-linear-progress__buffering-dots"></div>
+              <div class="mdc-linear-progress__buffer"></div>
+              <div class="mdc-linear-progress__bar mdc-linear-progress__primary-bar">
+                <span class="mdc-linear-progress__bar-inner"></span>
+              </div>
+              <div class="mdc-linear-progress__bar mdc-linear-progress__secondary-bar">
+                <span class="mdc-linear-progress__bar-inner"></span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-	  </div>
-	</div>
+    </div>
+  </div>
   <script type="text/javascript">
     window.mdc.autoInit();
   </script>

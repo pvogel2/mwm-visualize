@@ -2,7 +2,9 @@ var MWM = window.MWM || {};
 
 Walker = {
   labels: [],
-  ensureGroup: function(state, type) {
+  points : [],
+  animations: [],
+  ensureGroup(state, type) {
     var g = null;
     g = state.children.find(child => {
       return (child.type === 'Group' && child.name === type);
@@ -15,7 +17,7 @@ Walker = {
     return g;
   },
 
-  ensureLines: function(state, type, material) {
+  ensureLines(state, type, material) {
     var l = null;
     l = state.children.find(child => {
       return (child.isLineSegments && child.name === type);
@@ -34,30 +36,47 @@ Walker = {
     return l;
   },
 
-  getDefaultGeometry: function() {
+  getDefaultGeometry() {
     const geometry = new THREE.SphereGeometry( 0.1, 16, 16 );
     const material = new THREE.MeshBasicMaterial( {color: 0xbbbbbb} );
     return new THREE.Mesh( geometry, material );
   },
 
-  addRenderItem: function(group, lines, item) {
+  addRenderItem(group, lines, item) {
     lines.geometry.vertices.push(group.position);
     lines.geometry.vertices.push(item.position);
     group.add(item);
-    var l = group.children.length;
-    var r = l > 1 ? l * 0.2 : 0;
-    var phi = Math.PI *0.5;
-    var theta = 0.0;
+    const l = group.children.length;
+    const r = l > 1 ? l * 0.2 : 0;
+    const phi = Math.PI *0.5;
+    let theta = 0.0;
     group.children.forEach((child, idx) => {
       theta = 2 * Math.PI / l * idx;
-      var s = new THREE.Spherical(r, phi, theta);
-      var p = new THREE.Vector3();
-      child.position.setFromSpherical(s);
-      child.position.y += l * 0.2;
+      const s = new THREE.Spherical(r, phi, theta);
+      const p = new THREE.Vector3();
+      p.setFromSpherical(s);
+      p.y += l * 0.2;
+      child.userData.position = p;
+      this.animations.push(child);
+     });
+  },
+
+  initPointsCloud(obj) {
+    obj.children.forEach(child => {
+      if (child.type === 'Group') {
+        this.addPoint(child);
+      }
+      this.initPointsCloud(child);
     });
   },
 
-  addDefaultRepresentation: function(node, state) {
+  addPoint(obj) {
+    const v = new THREE.Vector3();
+    v.setFromMatrixPosition( obj.matrixWorld );
+    this.points.push(v);
+  },
+
+  addDefaultRepresentation(node, state) {
     const obj = this.getDefaultGeometry();
     const group = this.ensureGroup(state, node.type);
     const lines = this.ensureLines(state, node.type);
@@ -65,7 +84,7 @@ Walker = {
     return obj;
   },
 
-  addDeclarationRepresentation: function(node, state) {
+  addDeclarationRepresentation(node, state) {
     const geometry = new THREE.SphereGeometry( 0.1, 16, 16 );
     const material = new THREE.MeshBasicMaterial( {color: 0xbb0000} );
     const obj = new THREE.Mesh( geometry, material );
@@ -76,7 +95,7 @@ Walker = {
     return obj;
   },
 
-  addExpressionRepresentation: function(node, state) {
+  addExpressionRepresentation(node, state) {
     const geometry = new THREE.SphereGeometry( 0.1, 16, 16 );
     const material = new THREE.MeshBasicMaterial( {color: 0x00bb00} );
     const obj = new THREE.Mesh( geometry, material );
@@ -88,7 +107,7 @@ Walker = {
   },
 
 
-  addClauseRepresentation: function(node, state) {
+  addClauseRepresentation(node, state) {
     const geometry = new THREE.SphereGeometry( 0.1, 16, 16 );
     const material = new THREE.MeshBasicMaterial( {color: 0x00bbbb} );
     const obj = new THREE.Mesh( geometry, material );
@@ -99,15 +118,56 @@ Walker = {
     return obj;
   },
 
-  addMiscRepresentation: function(node, state) {
-    const geometry = new THREE.BoxGeometry( 0.1, 0.1, 0.1 );
-    const material = new THREE.MeshBasicMaterial( {color: 0x00ff} );
-    const obj = new THREE.Mesh( geometry, material );
+  addMiscRepresentation(node, state) {
+    state.matrixWorldNeedsUpdate = true;
+    const v = new THREE.Vector3().setFromMatrixPosition( state.matrixWorld );
+    //console.log(state.position);
+    // this.points.push(v);
+    //const geometry = new THREE.BoxGeometry( 0.1, 0.1, 0.1 );
+    //const material = new THREE.MeshBasicMaterial( {color: 0x00ff} );
+    //const obj = new THREE.Mesh( geometry, material );
 
-    const group = this.ensureGroup(state, node.type);
-    const lines = this.ensureLines(state, node.type, material);
-    this.addRenderItem(group, lines, obj);
-    return obj;
+    //const group = this.ensureGroup(state, node.type);
+    //const lines = this.ensureLines(state, node.type, material);
+    //this.addRenderItem(group, lines, obj);
+    //return obj;
+  },
+
+  addPointsCloud(){
+        /*stars setup*/
+        const p_uniforms = {
+            texture:   { type: "t", value: renderer.getTexture( "disc.png" ) },
+        };
+        p_uniforms.texture.value.wrapS = p_uniforms.texture.value.wrapT = THREE.RepeatWrapping;
+
+        const p_material = new THREE.ShaderMaterial( {
+            uniforms: p_uniforms,
+            depthWrite: false,
+            transparent: true,
+            vertexShader:   document.getElementById( 'vertexshader' ).textContent,
+            fragmentShader: document.getElementById( 'fragmentshader' ).textContent
+
+        });
+
+        const c = new THREE.Color( 1, 0, 0);
+        
+        const p_geometry = new THREE.BufferGeometry();
+        const p_positions = new Float32Array( this.points.length * 3 );
+        const p_colors = new Float32Array( this.points.length * 3 );
+        const p_sizes = new Float32Array( this.points.length);
+
+        for (let i = 0; i < this.points.length; i++) {
+            const p = this.points[i];
+            p.toArray(p_positions, i * 3);
+            c.toArray( p_colors, i * 3);
+            p_sizes[i] = 20;
+        }
+        p_geometry.addAttribute( 'position', new THREE.BufferAttribute( p_positions, 3 ));
+        p_geometry.addAttribute( 'size', new THREE.BufferAttribute( p_sizes, 1 ));
+        p_geometry.addAttribute( 'color', new THREE.BufferAttribute( p_colors, 3 ));
+        p_geometry.dynamic = true;
+
+        renderer.addObject("points", new THREE.Points( p_geometry, p_material), true);
   },
 
   addDomItem(label, obj) {
@@ -124,13 +184,15 @@ Walker = {
   },
 
   iterateBody(body, obj, c) {
-    if (Array.isArray(body)) {
-      body.forEach(item => {
-        c(item, obj);
-      });
-    } else {
-      c(body, obj);
-    }
+    setTimeout(() => {
+      if (Array.isArray(body)) {
+        body.forEach(item => {
+          c(item, obj);
+        });
+      } else {
+        c(body, obj);
+      }
+    }, 0);
   },
 
   iterateOptional(items, obj, c) {
@@ -143,27 +205,27 @@ Walker = {
     }
   },
 
-  Program: function(node, state, c) {
+  Program(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     this.addDomItem(node.type, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  EmptyStatement: function(node, state, c) {
+  EmptyStatement(node, state, c) {
     this.addDefaultRepresentation(node, state);
   },
 
-  BlockStatement: function(node, state, c) {
+  BlockStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     this.iterateBody(node.body, obj, c);
   },
 
-  ExpressionStatement: function(node, state, c) {
+  ExpressionStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.expression, obj);
   },
 
-  IfStatement: function(node, state, c) {
+  IfStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.test, obj);
     c(node.consequent, obj);
@@ -172,33 +234,33 @@ Walker = {
     }
   },
 
-  LabeledStatement: function(node, state, c) {
+  LabeledStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.label, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  BreakStatement: function(node, state, c) {
+  BreakStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     if (node.label) {
       c(node.label, obj);
     }
   },
 
-  ContinueStatement: function(node, state, c) {
+  ContinueStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     if (node.label) {
       c(node.label, obj);
     }
   },
 
-  WithStatement: function(node, state, c) {
+  WithStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.object, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  SwitchStatement: function(node, state, c) {
+  SwitchStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.discriminant, obj);
     node.cases.forEach(_case => {
@@ -206,19 +268,19 @@ Walker = {
     });
   },
 
-  ReturnStatement: function(node, state, c) {
+  ReturnStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     if (node.argument) {
       c(node.argument, obj);
     }
   },
 
-  ThrowStatement: function(node, state, c) {
+  ThrowStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.argument, obj);
   },
 
-  TryStatement: function(node, state, c) {
+  TryStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.block, obj);
     if (node.finalizer) {
@@ -229,19 +291,19 @@ Walker = {
     }
   },
 
-  WhileStatement: function(node, state, c) {
+  WhileStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.test, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  DoWhileStatement: function(node, state, c) {
+  DoWhileStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.test, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  ForStatement: function(node, state, c) {
+  ForStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     if (node.init) {
       c(node.init, obj);
@@ -255,21 +317,21 @@ Walker = {
     this.iterateBody(node.body, obj, c);
   },
 
-  ForInStatement: function(node, state, c) {
+  ForInStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.left, obj);
     c(node.right, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  ForOfStatement: function(node, state, c) {
+  ForOfStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     c(node.left, obj);
     c(node.right, obj);
     this.iterateBody(node.body, obj, c);
   },
 
-  LetStatement: function(node, state, c) {
+  LetStatement(node, state, c) {
     const obj = this.addDefaultRepresentation(node, state);
     node.head.forEach(item => {
       c(item, obj)
@@ -279,7 +341,7 @@ Walker = {
 
   /*DECLARATIONS*/
 
-  FunctionDeclaration: function(node, state, c) {
+  FunctionDeclaration(node, state, c) {
     const obj = this.addDeclarationRepresentation(node, state);
     node.params.forEach(param => {
       c(param, obj);
@@ -293,14 +355,14 @@ Walker = {
     this.iterateBody(node.body, obj, c);
   },
 
-  VariableDeclaration: function(node, state, c) {
+  VariableDeclaration(node, state, c) {
     const obj = this.addDeclarationRepresentation(node, state);
     node.declarations.forEach(declaration => {
       c(declaration, obj);
     });
   },
 
-  VariableDeclarator: function(node, state, c) {
+  VariableDeclarator(node, state, c) {
     const obj = this.addDeclarationRepresentation(node, state);
     if (node.init) {
       c(node.init, obj);
@@ -309,27 +371,27 @@ Walker = {
 
   /*EXPRESSIONS*/
 
-  ThisExpression: function(node, state, c) {
+  ThisExpression(node, state, c) {
     this.addExpressionRepresentation(node, state);
   },
 
-  ArrayExpression: function(node, state, c) {
+  ArrayExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     this.iterateOptional(node.elements, obj, c);
   },
 
-  ObjectExpression: function(node, state, c) {
+  ObjectExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     this.iterateOptional(node.properties, obj, c);
   },
 
-  Property: function(node, state, c) {
+  Property(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.key, obj);
     c(node.value, obj);
   },
 
-  FunctionExpression: function(node, state, c) {
+  FunctionExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     this.iterateOptional(node.params, obj, c);
     this.iterateOptional(node.defaults, obj, c);
@@ -339,7 +401,7 @@ Walker = {
     this.iterateOptional(node.body, obj, c);
   },
 
-  ArrowExpression: function(node, state, c) {
+  ArrowExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     this.iterateOptional(node.params, obj, c);
     this.iterateOptional(node.defaults, obj, c);
@@ -349,65 +411,65 @@ Walker = {
     this.iterateOptional(node.body, obj, c);
   },
 
-  SequenceExpression: function(node, state, c) {
+  SequenceExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     this.iterateOptional(node.expressions, obj, c);
   },
 
-  UnaryExpression: function(node, state, c) {
+  UnaryExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.argument, obj);
   },
 
-  BinaryExpression: function(node, state, c) {
+  BinaryExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.left, obj);
     c(node.right, obj);
   },
 
-  AssignmentExpression: function(node, state, c) {
+  AssignmentExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.left, obj);
     c(node.right, obj);
   },
  
-  UpdateExpression: function(node, state, c) {
+  UpdateExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.argument, obj);
   },
 
-  LogicalExpression: function(node, state, c) {
+  LogicalExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.left, obj);
     c(node.right, obj);
   },
 
-  ConditionalExpression: function(node, state, c) {
+  ConditionalExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.test, obj);
     c(node.alternate, obj);
     c(node.consequent, obj);
   },
 
-  NewExpression: function(node, state, c) {
+  NewExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.callee, obj);
     this.iterateOptional(node.arguments, obj, c);
   },
 
-  CallExpression: function(node, state, c) {
+  CallExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.callee, obj);
     this.iterateOptional(node.arguments, obj, c);
   },
 
-  MemberExpression: function(node, state, c) {
+  MemberExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     c(node.object, obj);
     c(node.property, obj);
   },
 
-  YieldExpression: function(node, state, c) {
+  YieldExpression(node, state, c) {
     const obj = this.addExpressionRepresentation(node, state);
     if (node.argument) {
       c(node.argument, obj);
@@ -418,19 +480,19 @@ Walker = {
 
   
   /* working ??? */
-  ObjectPattern: function(node, state, c) {
+  ObjectPattern(node, state, c) {
     const obj = this.addPatternRepresentation(node, state);
     this.iterateOptional(node.properties, obj, c);
   },
 
-  ArrayPattern: function(node, state, c) {
+  ArrayPattern(node, state, c) {
     const obj = this.addPatternRepresentation(node, state);
     this.iterateOptional(node.elements, obj, c);
   },
 
   /*CLAUSES*/
 
-  SwitchCase: function(node, state, c) {
+  SwitchCase(node, state, c) {
     const obj = this.addClauseRepresentation(node, state);
     if (node.test) {
       c(node.test, obj);
@@ -438,7 +500,7 @@ Walker = {
     this.iterateOptional(node.consequent, obj, c);
   },
 
-  CatchClause: function(node, state, c) {
+  CatchClause(node, state, c) {
     const obj = this.addClauseRepresentation(node, state);
     if (node.guard) {
       c(node.guard, obj);
@@ -446,24 +508,24 @@ Walker = {
     this.iterateOptional(node.body, obj, c);
   },
 
-  ComprehensionBlock: function(node, state, c) {
+  ComprehensionBlock(node, state, c) {
     const obj = this.addClauseRepresentation(node, state);
       c(node.right, obj);
   },
  
-  ComprehensionIf: function(node, state, c) {
+  ComprehensionIf(node, state, c) {
     const obj = this.addClauseRepresentation(node, state);
       c(node.test, obj);
   },
 
   /*MISCELLANEOUS*/
 
-  Identifier: function(node, state, c) {
-    const obj = this.addMiscRepresentation(node, state);
-    this.addDomItem(node.name, obj);
+  Identifier(node, state, c) {
+    this.addMiscRepresentation(node, state);
+    //this.addDomItem(node.name, obj);
   },
 
-  Literal: function(node, state, c) {
+  Literal(node, state, c) {
     this.addMiscRepresentation(node, state);
   },
 };

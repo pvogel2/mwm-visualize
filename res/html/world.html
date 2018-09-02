@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/res/css/mdc/material-components-web.css">
+    <link rel="stylesheet" href="/res/css/mdc-extend.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="/res/js/mdc/material-components-web.js"></script>
+    <script src="/res/js/three/build/three.js"></script>
+    <script src="/res/js/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="/res/js/three/examples/js/libs/stats.min.js"></script>
+    <script src="/res/js/mwm/bundle.js"></script>
+    <!-- script src="/res/js/assets/renderer.js"></script-->
+    <script src="/res/js/assets/ctrl.js"></script>
+    <script src="/res/js/assets/world.js"></script>
+  </head>
+  <body style="margin:0px">
+    <script id="vertexshader" type="x-shader/x-vertex">
+      attribute float size;
+      attribute vec3 color;
+
+      varying vec3 vColor;
+      varying float distToCamera;
+
+      void main() {
+
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        distToCamera = -mvPosition.z;
+        gl_PointSize = size / distToCamera;
+
+        gl_Position = projectionMatrix * mvPosition;
+
+      }
+    </script>
+
+    <script id="fragmentshader" type="x-shader/x-fragment">
+      uniform sampler2D texture;
+
+      varying vec3 vColor;
+
+      void main() {
+        vec4 inputSample = texture2D( texture, gl_PointCoord );
+        vec3 halo = vec3(0.3,0.3,0.3);
+        float l = length(vec2(sin(3.14 * (gl_PointCoord.x - 0.5)),sin(3.14 * (gl_PointCoord.y - 0.5))));//clamp ((0.5 + length(gl_PointCoord)), 0.0, 1.0);
+        vec3 coreColor = vec3(l*halo.x + vColor.x*(1.0-l), l*halo.y + vColor.y*(1.0-l), l*halo.z + vColor.z*(1.0-l));
+        gl_FragColor = vec4( coreColor * inputSample.xyz, inputSample.a*(1.0-l) );
+      }
+  </script>
+  <div id="threejs-container" style="overflow:hidden;position:absolute;top:0px;bottom:0px;left:0px;right:0px">
+  </div>
+  <div style="position:absolute;left:20px;top:20px;padding:20px;"  class="mdc-card" id="country-card">
+    <div class="demo-card__title mdc-typography--headline6 wb_title"><span class="wb_short_name"></span> <span class="wb_iso"></span></div>
+    <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle"></div>
+    <div class="demo-card__content">
+      <ul class="mdc-list mdc-list--two-line" aria-orientation="vertical">
+			  <li class="mdc-list-item">
+			    <span class="mdc-list-item__text">
+			      <span class="mdc-list-item__primary-text wb_sp_pop_totl"></span>
+			      <span class="mdc-list-item__secondary-text">Total Population</span>
+			    </span>
+			  </li>
+			  <li class="mdc-list-item">
+			    <span class="mdc-list-item__text">
+			      <span class="mdc-list-item__primary-text wb_sm_pop_refg"></span>
+			      <span class="mdc-list-item__secondary-text">Total Refugees</span>
+			    </span>
+			  </li>
+			  <li class="mdc-list-item">
+			    <span class="mdc-list-item__text">
+			      <span class="mdc-list-item__primary-text wb_sm_pop_refg_or"></span>
+			      <span class="mdc-list-item__secondary-text">Total Refugees Origin</span>
+			    </span>
+			  </li>
+      </ul>
+      <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
+		     aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014"
+		     aria-label="Select Value" data-mdc-auto-init="MDCSlider">
+			  <div class="mdc-slider__track-container">
+			    <div class="mdc-slider__track"></div>
+			  </div>
+			  <div class="mdc-slider__thumb-container">
+			    <div class="mdc-slider__pin">
+			      <span class="mdc-slider__pin-value-marker"></span>
+			    </div>
+			    <svg class="mdc-slider__thumb" width="21" height="21">
+			      <circle cx="10.5" cy="10.5" r="7.875"></circle>
+			    </svg>
+			    <div class="mdc-slider__focus-ring"></div>
+			  </div>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="wb-ctrl-card">
+    <div class="demo-card__title mdc-typography--headline6">worldbank</div>
+      <ul class="mdc-list" aria-orientation="vertical">
+        <li class="mdc-list-item">
+          <div class="mdc-switch" onchange="wb.togglePopulation(this)" data-mdc-auto-init="MDCSwitch">
+             <div class="mdc-switch__track"></div>
+             <div class="mdc-switch__thumb-underlay">
+               <div class="mdc-switch__thumb">
+                   <input type="checkbox" id="wb-pop-switch" class="mdc-switch__native-control" role="switch">
+               </div>
+             </div>
+           </div>
+          <label for="wb-pop-switch">show population</label>
+        <li>
+        <li class="mdc-list-item">
+          <div class="mdc-switch" onchange="wb.toggleRefugees(this)" data-mdc-auto-init="MDCSwitch">
+            <div class="mdc-switch__track"></div>
+            <div class="mdc-switch__thumb-underlay">
+              <div class="mdc-switch__thumb">
+                <input type="checkbox" id="wb-refu-switch" class="mdc-switch__native-control" role="switch">
+              </div>
+            </div>
+          </div>
+          <label for="wb-refu-switch">show refugees</label>
+        <li>
+        <li class="mdc-list-item">
+          <div class="mdc-switch" onchange="wb.toggleRefugeesOrigin(this)" data-mdc-auto-init="MDCSwitch">
+             <div class="mdc-switch__track"></div>
+             <div class="mdc-switch__thumb-underlay">
+               <div class="mdc-switch__thumb">
+                   <input type="checkbox" id="wb-refu-origin-switch" class="mdc-switch__native-control" role="switch">
+               </div>
+             </div>
+           </div>
+           <label for="wb-refu-origin-switch">show refugees origin</label>
+        <li>
+      </ul>
+  </div>
+  <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="ne-ctrl-card">
+    <div class="demo-card__title mdc-typography--headline6">natural earth</div>
+       <ul class="mdc-list" aria-orientation="vertical">
+	      <li class="mdc-list-item">
+	        <div class="mdc-switch" onchange="ne.toggleCities(this)" data-mdc-auto-init="MDCSwitch">
+	           <div class="mdc-switch__track"></div>
+	           <div class="mdc-switch__thumb-underlay">
+	             <div class="mdc-switch__thumb">
+	                 <input type="checkbox" id="ne-cities-switch" class="mdc-switch__native-control" role="switch">
+	             </div>
+	           </div>
+	         </div>
+	         <label for="ne-cities-switch">show cities</label>
+				<li>
+	      <li class="mdc-list-item">
+		      <div class="mdc-switch" onchange="ne.toggleRivers(this)" data-mdc-auto-init="MDCSwitch">
+		        <div class="mdc-switch__track"></div>
+		        <div class="mdc-switch__thumb-underlay">
+		          <div class="mdc-switch__thumb">
+		              <input type="checkbox" id="ne-rivers-switch" class="mdc-switch__native-control" role="switch">
+		          </div>
+		        </div>
+		      </div>
+		      <label for="ne-rivers-switch">show rivers</label>
+	      <li>
+	      <li class="mdc-list-item">
+		      <div class="mdc-switch" onchange="ne.toggleLakes(this)" data-mdc-auto-init="MDCSwitch">
+		        <div class="mdc-switch__track"></div>
+		        <div class="mdc-switch__thumb-underlay">
+		          <div class="mdc-switch__thumb">
+		              <input type="checkbox" id="ne-lakes-switch" class="mdc-switch__native-control" role="switch">
+		          </div>
+		        </div>
+		      </div>
+		      <label for="ne-lakes-switch">show lakes</label>
+	      <li>
+	      <li class="mdc-list-item">
+		      <div class="mdc-switch" onchange="ne.toggleGeolines(this)" data-mdc-auto-init="MDCSwitch">
+		        <div class="mdc-switch__track"></div>
+		        <div class="mdc-switch__thumb-underlay">
+		          <div class="mdc-switch__thumb">
+		              <input type="checkbox" id="ne-geolines-switch" class="mdc-switch__native-control" role="switch">
+		          </div>
+		        </div>
+		      </div>
+		      <label for="ne-geolines-switch">show geolines</label>
+	      <li>
+	   </ul>
+    </div>
+    <div class="mdc-card__actions">
+    </div>
+  </div>
+  <div style="position:absolute;right:20px;top:20px;color:white;"  class="mdc-menu-anchor">
+    <div class="mdc-menu" tabindex="-1" id="earthdata_menu">
+      <ul class="mdc-menu__items mdc-list" role="menu" aria-hidden="true">
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          cities
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          rivers
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          lakes
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          geolines
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div style="position:absolute;right:20px;bottom:20px;color:white;"  class="mdc-menu-anchor">
+    <button  class="mdc-fab" aria-label="Configure" onclick="toggleFabMenu()">
+      <span class="mdc-fab__icon material-icons">menu</span>
+    </button>
+    <div class="mdc-menu" tabindex="-1" id="fab_menu">
+		  <ul class="mdc-menu__items mdc-list" role="menu" aria-hidden="true">
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          rotation
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0" class="mdc-menu-anchor">
+          natural earth
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          worldbank
+        </li>
+		  </ul>
+     </div>
+  </div>
+  </body>
+</html>

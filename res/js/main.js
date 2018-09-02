@@ -1,7 +1,8 @@
 var renderer;
 
 document.addEventListener("DOMContentLoaded", function(event) {
-  renderer = new MWM.appl();
+  renderer = new MWM.Renderer();
+  renderer.res = '/res/obj/';
   renderer.addGrid(100, 10);
   renderer.addAxes(10, 10);
   loadAst();
@@ -18,14 +19,17 @@ function loadAst() {
 };
 
 function walkAst(ast) {
-  //var w = new Walker();
-  var state = new THREE.Group();
+  // var w = new Walker();
+  const state = new THREE.Group();
   state.name = 'File';
-  window.acorn.walk.recursive(ast, state, Walker);
-  console.log(state);
   renderer.addObject('File', state);
 
+  // renderer.three.scene.updateMatrixWorld();
+  // Walker.initPointsCloud(state);
+  // Walker.addPointsCloud();
+
   renderer.registerEventCallback("render", (event, intersections) => {
+    console.log('render animation frame');
     var offset = 0; // renderer.three.renderer.domElement.offset();
     var widthHalf = 0.5 * renderer.three.renderer.context.canvas.width;
     var heightHalf = 0.5 * renderer.three.renderer.context.canvas.height;
@@ -37,7 +41,7 @@ function walkAst(ast) {
         renderer.three.camera.matrixWorldInverse
       )
     );
-    for (var i = 0; i < Walker.labels.length; i ++) {
+    for (let i = 0; i < Walker.labels.length; i ++) {
       var div = Walker.labels[i];
       var ref = div.walker.ref;
       var vector = ref.position.clone().setFromMatrixPosition( ref.matrixWorld );
@@ -54,7 +58,41 @@ function walkAst(ast) {
         div.style.display = 'none';
       }
     }
+    for (let i = 0; i < Walker.animations.length; i ++) {
+      var obj = Walker.animations[i];
+      if (obj.position.x != obj.userData.position.x) {
+        if(obj.userData.position.x < 0) {
+          obj.position.x -= 0.01;
+          obj.position.x = Math.max(obj.position.x, obj.userData.position.x);
+        } else if (obj.userData.position.x > 0) {
+          obj.position.x += 0.01;
+          obj.position.x = Math.min(obj.position.x, obj.userData.position.x);
+        }
+      }
+      if (obj.position.y != obj.userData.position.y) {
+        if(obj.userData.position.y < 0) {
+          obj.position.y -= 0.01;
+          obj.position.y = Math.max(obj.position.y, obj.userData.position.y);
+        } else if (obj.userData.position.y > 0) {
+          obj.position.y += 0.01;
+          obj.position.y = Math.min(obj.position.y, obj.userData.position.y);
+        }
+      }
+      if (obj.position.z != obj.userData.position.z) {
+        if(obj.userData.position.z < 0) {
+          obj.position.z -= 0.01;
+          obj.position.z = Math.max(obj.position.z, obj.userData.position.z);
+        } else if (obj.userData.position.z > 0) {
+          obj.position.z += 0.01;
+          obj.position.z = Math.min(obj.position.z, obj.userData.position.z);
+        }
+      }
+    }
   });
 
+  document.querySelector('.mwm-loading').style.display = 'none';
+
+  console.log('render start');
   renderer.start();
+  window.acorn.walk.recursive(ast, state, Walker);
 }

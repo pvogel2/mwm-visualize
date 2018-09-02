@@ -611,7 +611,7 @@ eliteApp.controller("eliteCtrl", [ '$scope','$window','$http','$filter','rendere
 
 		var a_material = new THREE.ShaderMaterial({
 			vertexColors: THREE.VertexColors,
-			shading : THREE.SmoothShading,
+			//shading : THREE.SmoothShading,
 			vertexShader : 'varying vec4 axColor;void main() {\n\taxColor = vec4( color, 1.0 );gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}',
 			fragmentShader : 'varying vec4 axColor;void main() {\n\tgl_FragColor = axColor;\n}'
 	    });
@@ -681,7 +681,7 @@ eliteApp.controller("eliteCtrl", [ '$scope','$window','$http','$filter','rendere
 
         var c_material = new THREE.ShaderMaterial({
             vertexColors: THREE.VertexColors,
-            shading : THREE.SmoothShading,
+            //shading : THREE.SmoothShading,
             vertexShader : 'varying vec4 vColor;\n\tvoid main() {\n\tvColor = vec4( color, 1.0 );\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}',
             fragmentShader : 'varying vec4 vColor;\n\tvoid main() {\n\tgl_FragColor = vColor;\n}'
         });
