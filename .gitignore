@@ -1,1 +1,11 @@
 node_modules
+.project
+.settings
+data/centroids
+data/naturalEarth
+res/obj/GRAY*
+res/obj/boundaries*
+res/obj/4_no_ice_clouds_mts_8k.jpg
+res/obj/water_8k.png
+res/obj/earth.tif
+res/oldproject/*

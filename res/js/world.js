@@ -1,7 +1,5 @@
 let renderer;
 
-var datasets = 0;
-var points = 0;
 function loadCities(parent, color) {
   fetch('/dbf').then(
     response => response.json()
@@ -22,7 +20,7 @@ function loadCountries(parent, color) {
       response => response.json()
       ).then(json => {
         wb.setData(json);
-        //createCentroids(json, parent, color);
+        createCentroids(json, parent, color);
         createCapitals(json, parent, color);
       }).catch(function(err) {
         console.log('err', err);
@@ -52,7 +50,15 @@ function loadCapitals(parent, color) {
 };
 
 function loadCountryData(iso2, callback) {
-  fetch(`/data/wb/${iso2}`).then(
+  var indocators = '';
+  window._indicators_.forEach((indicator, index) => {
+    indocators = `${indocators}${(index > 0 ?';' : '')}${indicator}`;
+  });
+  var date = `2000:2017`;
+
+  var url = `/data/wbv2/country/${iso2}/indocators/${indocators}/?date=${date}`;
+
+  fetch(url).then(
     response => response.json()
   ).then(json => {
     callback(null, json);
@@ -61,16 +67,47 @@ function loadCountryData(iso2, callback) {
   });
 };
 
-function loadPopulation(parent, color) {
-  fetch('/data/wb').then(
+function loadPopulation() {
+  const p = wb.loadPopulation();
+  const color = 0x0000dd;
+  const parent = getWorldSphere();
+
+  p.then(
     response => response.json()
   ).then(json => {
-    createPopulationCloud(json, parent, color);
+    createPointCloud(json, parent, color, 0.00000001, '' + window._controls_.date, 'SP.POP.TOTL');
   }).catch(function(err) {
     console.log('err', err);
   });
 };
 
+function loadRefugees() {
+  const p = wb.loadRefugees();
+  const color = 0xdd0000;
+  const parent = getWorldSphere();
+
+  p.then(
+    response => response.json()
+  ).then(json => {
+    createPointCloud(json, parent, color, 0.00001, '' + window._controls_.date, 'SM.POP.REFG');
+  }).catch(function(err) {
+    console.log('err', err);
+  });
+};
+
+function loadRefugeesOrigin() {
+  const p = wb.loadRefugeesOrigin();
+  const color = 0x00dd00;
+  const parent = getWorldSphere();
+
+  p.then(
+    response => response.json()
+  ).then(json => {
+    createPointCloud(json, parent, color, 0.00001, '' + window._controls_.date, 'SM.POP.REFG.OR');
+  }).catch(function(err) {
+    console.log('err', err);
+  });
+};
 
 function loadFeature(parent, color, id, type) {
   if (worldWorker) {
@@ -188,7 +225,7 @@ function createCityCloud(data, parent, color) {
   renderer.addObject( 'citylines', lines , false, parent);
 }
 
-function createPopulationCloud(data, parent, color) {
+function createPointCloud(data, parent, color, scale, year, id) {
   var c_material = new THREE.ShaderMaterial({
       vertexColors: THREE.VertexColors,
       //shading : THREE.SmoothShading,
@@ -206,7 +243,7 @@ function createPopulationCloud(data, parent, color) {
 
   for (var i = 0; i < data.length; i++) {
       var date = data[i];
-      var wb_country = wb.map[date.iso2.toLowerCase()];
+      var wb_country = wb.map[date.country.id.toLowerCase()];
 
       var s0 = calcSphericalFromLatLongRad(0.0, 0.0, 20.0);
       if (wb_country) {
@@ -216,8 +253,10 @@ function createPopulationCloud(data, parent, color) {
       }
       var v0 = new THREE.Vector3().setFromSpherical(s0);
       var s1 = s0.clone();
-      if (date.SP_POP_TOTL && date.SP_POP_TOTL.data && date.SP_POP_TOTL.data.length) {
-        s1.radius += 0.00000001 * date.SP_POP_TOTL.data[0].value || 0.0;
+      // if (date.SP_POP_TOTL && date.SP_POP_TOTL.data && date.SP_POP_TOTL.data.length) {
+      //  s1.radius += 0.00000001 * date.SP_POP_TOTL.data[0].value || 0.0;
+      if (date.date === year && date.indicator.id === id) {
+        s1.radius += scale * date.value || 0.0;
       } else {
         console.log(date);
       }
@@ -225,7 +264,7 @@ function createPopulationCloud(data, parent, color) {
       var v0 = new THREE.Vector3().setFromSpherical(s0);
       var v1 = new THREE.Vector3().setFromSpherical(s1);
 
-      var pointColor = new THREE.Color( 0, 0, 1);
+      var pointColor = new THREE.Color(color);
       c_positions[ i * 6 + 0 ] = v0.x;
       c_positions[ i * 6 + 1 ] = v0.y;
       c_positions[ i * 6 + 2 ] = v0.z;
@@ -241,7 +280,7 @@ function createPopulationCloud(data, parent, color) {
   c_geometry.addAttribute( 'color', new THREE.BufferAttribute( c_colors, 3 ) );
 
   var lines = new THREE.LineSegments( c_geometry, c_material);
-  renderer.addObject( 'popupationlines', lines , false, parent);
+  renderer.addObject( 'lines' + Math.random(), lines , false, parent);
 }
 
 function createCentroids(data, parent, color) {
@@ -462,23 +501,64 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
     if (intersected) {
       if (intersected.index != null) {
-        const country_data = wb.data[intersected.index];
+        intersected.object.geometry.attributes.size.array[intersected.index] = 400;
+        intersected.object.geometry.attributes.size.needsUpdate = true;
+
+        const date_year = window._controls_.date;
+        const country_data = wb.getCountry(intersected.index);
+
         document.querySelector('.wb_title .wb_short_name').textContent = country_data.name;
         document.querySelector('.wb_title .wb_iso').textContent = `(${country_data.iso2Code})`;
         document.querySelector('.wb_subtitle').textContent = `${country_data.incomeLevel.value} (${country_data.incomeLevel.id})`;
-        intersected.object.geometry.attributes.size.array[intersected.index] = 400;
-        intersected.object.geometry.attributes.size.needsUpdate = true;
         if (country_data.iso2Code) {
-          loadCountryData(country_data.iso2Code, (err, json) => {
-            if (!err) {
-              var idx = 4;
-              document.querySelector('.wb_sp_pop_totl').textContent = json['SP_POP_TOTL'].data[4].value;
-              document.querySelector('.wb_sm_pop_refg').textContent = json['SM_POP_REFG'].data[4].value || "-";
-              document.querySelector('.wb_sm_pop_refg_or').textContent = json['SM_POP_REFG_OR'].data[4].value || "-";
-            } else {
-              console.log(err);
-            }
-          });
+          if (country_data.indicators && country_data.indicators.SP_POP_TOTL && country_data.indicators.SM_POP_REFG && country_data.indicators.SM_POP_REFG_OR) {
+            let _item = null; 
+
+            _item = country_data.indicators.SP_POP_TOTL.find(item => {
+              return (`${date_year}` === item.date);
+            });
+            document.querySelector('.wb_sp_pop_totl').textContent = _item ? _item.value : "-";
+
+            _item = country_data.indicators.SM_POP_REFG.find(item => {
+              return (`${date_year}` === item.date);
+            });
+            document.querySelector('.wb_sm_pop_refg').textContent = _item ? _item.value : "-";
+
+            _item = country_data.indicators.SM_POP_REFG_OR.find(item => {
+              return (`${date_year}` === item.date);
+            });
+            document.querySelector('.wb_sm_pop_refg_or').textContent = _item ? _item.value : "-";
+          } else {
+            loadCountryData(country_data.iso2Code, (err, json) => {
+              if (!err) {
+                if (!country_data.indicators) {
+                  country_data.indicators = {};
+                }
+                country_data.indicators.SP_POP_TOTL = json.filter(item => {   
+                  return (item.country.id === country_data.iso2Code && item.indicator.id === 'SP.POP.TOTL');
+                });
+                country_data.indicators.SM_POP_REFG = json.filter(item => { return item.country.id === country_data.iso2Code && item.indicator.id === 'SM.POP.REFG'});
+                country_data.indicators.SM_POP_REFG_OR = json.filter(item => { return item.country.id === country_data.iso2Code && item.indicator.id === 'SM.POP.REFG.OR'});
+                var value = '';
+                value = country_data.indicators.SP_POP_TOTL.find(function(item) {
+                  return item.date === date_year;
+                });
+                document.querySelector('.wb_sp_pop_totl').textContent = value.value | '-';
+
+                value = country_data.indicators.SM_POP_REFG.find(function(item) {
+                  return item.date === date_year;
+                });
+                document.querySelector('.wb_sm_pop_refg').textContent = value.value | '-';
+
+                value = country_data.indicators.SM_POP_REFG_OR.find(function(item) {
+                  return item.date === date_year;
+                });
+                document.querySelector('.wb_sm_pop_refg_or').textContent = value.value | '-';
+              } else {
+                console.log(err);
+              }
+            });
+          }
         }
       }
     }

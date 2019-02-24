@@ -34,42 +34,57 @@ app.use('/parse/openworld', function(req, res) {
   .catch(error => console.error(error.stack));
 });
 
-app.use('/data/wb', function(req, res){
-  var parts = url.parse(req.url);
+app.use('/data/wbv2/', function(req, res) {
+
+  const parts = url.parse(req.url, true);
 //http://api.worldbank.org/countries/bra;usa
-
-  var path = parts.path;
-  var elements = path.split("/");
-  //console.log(elements);
+  let country = '';
+  let indicator = '';
+  let date = parts.query.date || '2017';
+  const path = parts.path;
+  const elements = path.split("/");
   elements.shift();
-  //console.log(elements);
-  //countries = elements[1].split(";");
-  var country = elements[0];
+  const flag = elements.shift();
 
-  if (country) {
-    worldbank.readIndicators(country)
-      .then(data => {
-        res.setHeader("Content-Type", "application/json");
-        res.send(JSON.stringify(data));
-      })
-      .catch(err => {
-        res.setHeader("Content-Type", "text/plain");
-        res.statusCode = 500;
-        res.send(err.message);
+  if (flag ==='country') {
+    country = elements.shift();
+    elements.shift();
+    let indicators = elements.shift();
+    const promises = [];
+
+    if (indicators) {
+      console.log('indicators', indicators, indicators.length);
+      indicators = indicators.split(';');
+      console.log('indicators', indicators, indicators.length);
+      indicators.forEach(indicator => {
+        promises.push(worldbank.countryQuery(country, indicator, date));
       });
+    } else {
+      promises.push(worldbank.countryQuery(country));
+    }
+
+    Promise.all(promises)
+    .then(results => {
+      let result = [];
+      results.forEach(arr => { 
+        result = result.concat(arr);
+      });
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(result));
+    })
+    .catch(err => {
+      res.setHeader("Content-Type", "text/plain");
+      res.statusCode = 500;
+      res.send(err.message);
+    });
+  } else if (flag ==='indicator') {
+    indicator = elements.shift();
+    worldbank.indicatorQuery(indicator);
   } else {
-    worldbank.readIndicators()
-      .then(data => {
-        res.setHeader("Content-Type", "application/json");
-        console.log(data);
-        res.send(JSON.stringify(data));
-      })
-      .catch(err => {
-        res.setHeader("Content-Type", "text/plain");
-        res.statusCode = 500;
-        res.send(err.message);
-      });
+    console.log('unknown:', flag);
   }
+  // 
+  // 
 });
 
 app.use('/data/centroids', function(req, res){
@@ -84,12 +99,8 @@ app.use('/data/centroids', function(req, res){
 });
 
 app.use('/data/countries', function(req, res){
-  worldbank.readCountries((err, countries) => {
-    if (err) {
-      res.setHeader("Content-Type", "application/json");
-      res.statusCode = 500;
-      res.send(JSON.stringify({}));
-    } else {
+  worldbank.countriesQuery()
+    .then(countries => {
       csv2json().fromFile('data/centroids/country_centroids_google.csv').then(centroids => {
         countries.forEach(country => {
           const center = {
@@ -107,8 +118,14 @@ app.use('/data/countries', function(req, res){
         res.setHeader("Content-Type", "application/json");
         res.send(JSON.stringify(countries));
       });
-    }
-  });
+    })
+    .catch(err => {
+      console.log('api call /data/countries', err);
+
+      res.setHeader("Content-Type", "application/json");
+      res.statusCode = 500;
+      res.send(JSON.stringify({}));
+    });
 });
 
 app.use('/data/openworld', function(req, res) {

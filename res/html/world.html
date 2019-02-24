@@ -10,6 +10,7 @@
     <script src="/res/js/three/examples/js/libs/stats.min.js"></script>
     <script src="/res/js/mwm/bundle.js"></script>
     <!-- script src="/res/js/assets/renderer.js"></script-->
+    <script src="/res/js/assets/wb.js"></script>
     <script src="/res/js/assets/ctrl.js"></script>
     <script src="/res/js/assets/world.js"></script>
   </head>
@@ -74,7 +75,7 @@
       </ul>
       <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
 		     aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014"
-		     aria-label="Select Value" data-mdc-auto-init="MDCSlider">
+		     aria-label="Select Value">
 			  <div class="mdc-slider__track-container">
 			    <div class="mdc-slider__track"></div>
 			  </div>
@@ -90,11 +91,21 @@
       </div>
     </div>
   </div>
+  <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="ind-ctrl-card">
+    <div class="demo-card__title mdc-typography--headline6">add indicator</div>
+      <div class="mdc-text-field mdc-text-field--with-trailing-icon">
+        <input type="text" id="indicator-text-field" class="mdc-text-field__input">
+        <label class="mdc-floating-label" for="indicator-text-field"></label>
+        <i class="material-icons mdc-text-field__icon" tabindex="0" role="button">done</i>
+        <div class="mdc-line-ripple"></div>
+      </div>
+    </div>
+  </div>
   <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="wb-ctrl-card">
     <div class="demo-card__title mdc-typography--headline6">worldbank</div>
       <ul class="mdc-list" aria-orientation="vertical">
         <li class="mdc-list-item">
-          <div class="mdc-switch" onchange="wb.togglePopulation(this)" data-mdc-auto-init="MDCSwitch">
+          <div class="mdc-switch" onchange="togglePopulation(this)" data-mdc-auto-init="MDCSwitch">
              <div class="mdc-switch__track"></div>
              <div class="mdc-switch__thumb-underlay">
                <div class="mdc-switch__thumb">
@@ -105,7 +116,7 @@
           <label for="wb-pop-switch">show population</label>
         <li>
         <li class="mdc-list-item">
-          <div class="mdc-switch" onchange="wb.toggleRefugees(this)" data-mdc-auto-init="MDCSwitch">
+          <div class="mdc-switch" onchange="toggleRefugees(this)" data-mdc-auto-init="MDCSwitch">
             <div class="mdc-switch__track"></div>
             <div class="mdc-switch__thumb-underlay">
               <div class="mdc-switch__thumb">
@@ -116,7 +127,7 @@
           <label for="wb-refu-switch">show refugees</label>
         <li>
         <li class="mdc-list-item">
-          <div class="mdc-switch" onchange="wb.toggleRefugeesOrigin(this)" data-mdc-auto-init="MDCSwitch">
+          <div class="mdc-switch" onchange="toggleRefugeesOrigin(this)" data-mdc-auto-init="MDCSwitch">
              <div class="mdc-switch__track"></div>
              <div class="mdc-switch__thumb-underlay">
                <div class="mdc-switch__thumb">
@@ -181,7 +192,7 @@
     </div>
   </div>
   <div style="position:absolute;right:20px;top:20px;color:white;"  class="mdc-menu-anchor">
-    <div class="mdc-menu" tabindex="-1" id="earthdata_menu">
+    <div class="mdc-menu mdc-menu-surface" tabindex="-1" id="earthdata_menu">
       <ul class="mdc-menu__items mdc-list" role="menu" aria-hidden="true">
         <li class="mdc-list-item" role="menuitem" tabindex="0">
           cities
@@ -198,19 +209,22 @@
       </ul>
     </div>
   </div>
-  <div style="position:absolute;right:20px;bottom:20px;color:white;"  class="mdc-menu-anchor">
+  <div style="position:absolute;right:20px;bottom:20px;color:white;"  class="mdc-menu-surface--anchor">
     <button  class="mdc-fab" aria-label="Configure" onclick="toggleFabMenu()">
       <span class="mdc-fab__icon material-icons">menu</span>
     </button>
-    <div class="mdc-menu" tabindex="-1" id="fab_menu">
+    <div class="mdc-menu mdc-menu-surface" tabindex="-1" id="fab_menu">
 		  <ul class="mdc-menu__items mdc-list" role="menu" aria-hidden="true">
         <li class="mdc-list-item" role="menuitem" tabindex="0">
           rotation
         </li>
-        <li class="mdc-list-item" role="menuitem" tabindex="0" class="mdc-menu-anchor">
+        <li class="mdc-list-item" role="menuitem" tabindex="0" class="mdc-menu-surface--anchor">
           natural earth
         <li class="mdc-list-item" role="menuitem" tabindex="0">
           worldbank
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          indicators
         </li>
 		  </ul>
      </div>
