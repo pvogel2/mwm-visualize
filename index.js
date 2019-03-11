@@ -60,6 +60,7 @@ app.use('/data/wbv2/', function(req, res) {
         promises.push(worldbank.countryQuery(country, indicator, date));
       });
     } else {
+      console.log('country', country);
       promises.push(worldbank.countryQuery(country));
     }
 
@@ -79,7 +80,16 @@ app.use('/data/wbv2/', function(req, res) {
     });
   } else if (flag ==='indicator') {
     indicator = elements.shift();
-    worldbank.indicatorQuery(indicator);
+    const p = worldbank.indicatorQuery(indicator);
+    p.then(r => {
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(r));
+    })
+    .catch(err => {
+      res.setHeader("Content-Type", "text/plain");
+      res.statusCode = 500;
+      res.send(err.message);
+    });
   } else {
     console.log('unknown:', flag);
   }
@@ -99,7 +109,8 @@ app.use('/data/centroids', function(req, res){
 });
 
 app.use('/data/countries', function(req, res){
-  worldbank.countriesQuery()
+  console.log('aaa');
+  worldbank.countryQuery()
     .then(countries => {
       csv2json().fromFile('data/centroids/country_centroids_google.csv').then(centroids => {
         countries.forEach(country => {
