@@ -14,13 +14,13 @@
   "license": "MIT",
   "dependencies": {
     "acorn": "5",
+    "csvtojson": "*",
     "express": "4",
     "material-components-web": "*",
     "mwm-renderer": "*",
-    "three": "^0.92.0",
-    "shapefile": "*",
-    "csvtojson": "*",
+    "mwm-worldbank": "*",
     "node-dbf": "../node-dbf",
-    "mongodb": "*"
+    "shapefile": "*",
+    "three": "^0.92.0"
   }
 }

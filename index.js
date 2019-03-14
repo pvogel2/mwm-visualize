@@ -4,7 +4,7 @@ const acorn = require('acorn');
 const fs = require('fs');
 const url = require('url');
 const openworld = require('./lib/openworld');
-const worldbank = require('./lib/worldbank');
+const worldbank = require('mwm-worldbank');
 const csv2json = require('csvtojson');
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/res/html/index.html'));
