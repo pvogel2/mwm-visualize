@@ -37,11 +37,13 @@ class Renderer {
             this.height = this.parent.getClientRects()[0].height;
 			//setup the three camera
 			this.three.camera = new THREE.PerspectiveCamera( 75, this.width / this.height, 0.1, 1000 );
-			this.three.camera.position.set(0, 15, 40);
+			this.three.camera.position.set(0, 150, 150);
 			//setup the used three renderer
-			this.three.renderer = new THREE.WebGLRenderer({antialias: false});
+			this.three.renderer = new THREE.WebGLRenderer({antialias: true});
 			this.three.renderer.setSize( this.width, this.height );
-			this.three.renderer.shadowMapSoft = false;
+			this.three.renderer.shadowMap.enabled = true;
+			//this.three.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			//this.three.renderer.shadowMapSoft = true;
 			this.three.renderer.gammaInput = true;
 			this.three.renderer.gammaOutput = true;
 
@@ -114,7 +116,7 @@ class Renderer {
 		      this.stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 		      this.parent.appendChild( this.stats.dom );
 		    }
-			this._setupLights();
+			//this._setupLights();
 			this.paused = false;
 			this.running = true;
 			this._render();

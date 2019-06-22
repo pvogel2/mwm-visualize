@@ -1,4 +1,4 @@
-importScripts('/res/js/three/build/three.js');
+// importScripts('/res/js/three/build/three.js');
 
 function loadFeature(id, type, color) {
   fetch(`/data/openworld/${id}/${type}`).then(

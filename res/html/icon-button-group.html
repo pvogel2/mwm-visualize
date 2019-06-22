@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <script>
+      const MDCComponent = mdc.base.MDCComponent;
+      const MDCFoundation = mdc.base.MDCFoundation;
+
+      class IconButtonGroupFoundation extends MDCFoundation {
+        // static get cssClasses
+        // static get strings
+        // static get numbers
+
+        static get defaultAdapter() {
+          return {
+            getToggleElements: (/* selector: string */) => [], /* we need a NodeList, no way to create it */
+            removeClass: (/* className: string */) => {},
+            registerInteractionHandler: (/* type: string, handler: EventListener*/ ) => {},
+            deregisterInteractionHandler: (/* type: string, handler: EventListener*/ ) => {},
+          };
+        }
+
+        constructor(adapter) {
+          super(Object.assign(IconButtonGroupFoundation.defaultAdapter, adapter));
+        }
+
+        init() {
+          this.iconButtons_ = [];
+          this.adapter_.getToggleElements('.mdc-icon-button').forEach(el => {
+            this.iconButtons_.push(new mdc.iconButton.MDCIconButtonToggle(el));
+          });
+          this.changeHandler_ = event => this.updateToggles(event);
+          this.adapter_.registerInteractionHandler('MDCIconButtonToggle:change', this.changeHandler_);
+        }
+
+        destroy() {
+          this.adapter_.deregisterInteractionHandler('MDCIconButtonToggle:change', this.changeHandler_);
+          this.iconButtons_.forEach(ib => ib.destroy());
+        }
+
+        updateToggles(event) {
+          if (!event.detail.isOn) {
+            return;
+          }
+
+          const item = event.currentTarget;
+          this.iconButtons_.forEach(ib => {
+            if (item !== ib.root_) {
+              ib.on = false;
+            }
+          });
+        }
+      };
+
+      class IconButtonGroup extends MDCComponent {
+        getDefaultFoundation() {
+          return new IconButtonGroupFoundation({
+            getToggleElements: selector => this.root_.querySelectorAll(selector),
+            removeClass: className => this.root_.classList.remove(className),
+            registerInteractionHandler: (type, handler) => this.foundation_.iconButtons_.forEach(ib => {
+              ib.listen(type, handler);
+            }),
+            deregisterInteractionHandler: (type, handler) => this.foundation_.iconButtons_.forEach(ib => {
+              ib.unlisten(type, handler);
+            })
+          });
+        }
+
+        destroy() {
+          this.foundation_.destroy();
+        }
+      }
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", event => {
+        // const tb1 = new mdc.iconButton.MDCIconButtonToggle(document.getElementById('tb1'));
+        // const tb2 = new mdc.iconButton.MDCIconButtonToggle(document.getElementById('tb2'));
+        // const tb3 = new mdc.iconButton.MDCIconButtonToggle(document.getElementById('tb3'));
+
+        window.btngrp = new IconButtonGroup(document.getElementById('tbg1'));
+      });
+    </script>
+  </head>
+  <body>
+    <div id="tbg1" class="icon-button-group">
+      <button id="tb1" class="mdc-icon-button material-icons mdc-icon-button--on">
+        <i class="material-icons mdc-icon-button__icon mdc-icon-button__icon--on">favorite</i>
+        <i class="material-icons mdc-icon-button__icon">favorite_border</i>
+      </button>
+      <button id="tb2" class="mdc-icon-button material-icons">
+        <i class="material-icons mdc-icon-button__icon mdc-icon-button__icon--on">favorite</i>
+        <i class="material-icons mdc-icon-button__icon">favorite_border</i>
+      </button>
+      <button id="tb3" class="mdc-icon-button material-icons">
+        <i class="material-icons mdc-icon-button__icon mdc-icon-button__icon--on">favorite</i>
+        <i class="material-icons mdc-icon-button__icon">favorite_border</i>
+      </button>
+    </div>
+  </body>
+</html>

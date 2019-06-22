@@ -20,7 +20,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   const D = 0.06;
   const L = 10;
-  renderer.registerEventCallback("render", (event, intersections) => {
+
+/*  renderer.registerEventCallback("render", (event, intersections) => {
     let averageX = 0;
     const vAverage = new THREE.Vector3();
     const repulsionConst = 0.5;
@@ -75,12 +76,109 @@ document.addEventListener("DOMContentLoaded", function(event) {
     animations.forEach(curSphere => {
       curSphere.position.sub(vAverage);
     });
-});
+});*/
+  // INITIAL SETTINGS
+  //https://www.khanacademy.org/partner-content/pixar/simulation/hair-simulation-code/pi/step-5-multiple-spring-mass-system
+  var gravity = 5;
+  var mass = 30;
+
+  // Mass 1
+  var mass1PositionY = 0;
+  var mass1PositionX = 0;
+  var mass1VelocityY = 0;
+  var mass1VelocityX = 0;
+
+  // Mass 2
+  var mass2PositionY = 0;
+  var mass2PositionX = 0;
+  var mass2VelocityY = 0;
+  var mass2VelocityX = 0;
+
+  var timeStep = 0.28;
+  var anchorX = 0;//209;
+  var anchorY = 0;//53;
+  var k = 2;
+  var damping = 2;
+
+  var myScale = 0.03;
+
+  var positions = [
+    [0, 0],[0, 0]
+  ];
+  var velocities = [
+    [0, 0],[0, 0]
+  ];
+
+  var cb = function(event, intersections) {
+    var forces = [];
+    for (var p = 0; p < positions.length; p++) {
+      var f = -k*p[i][1];
+      forces.push(f);
+    }
+  }
+  // DRAW FUNCTION
+  renderer.registerEventCallback("render", (event, intersections) => {
+       // Mass 1 Spring Force
+       var mass1SpringForceY = -k*(mass1PositionY - anchorY);
+       //var mass1SpringForceX = -k*(mass1PositionX - anchorX);
+       
+       // Mass 2 Spring Force
+       var mass2SpringForceY = -k*(mass2PositionY - mass1PositionY);
+       //var mass2SpringForceX = -k*(mass2PositionX - mass1PositionX);
+       
+       // Mass 1 daming
+       var mass1DampingForceY = damping * mass1VelocityY;
+       //var mass1DampingForceX = damping * mass1VelocityX;
+       
+       // Mass 2 daming
+       var mass2DampingForceY = damping * mass2VelocityY;
+       //var mass2DampingForceX = damping * mass2VelocityX;
+       
+       // Mass 1 net force
+       var mass1ForceY = mass1SpringForceY + mass * gravity - mass1DampingForceY - mass2SpringForceY + mass2DampingForceY;
+       
+       //var mass1ForceX = mass1SpringForceX - mass1DampingForceX - mass2SpringForceX + mass2DampingForceX;
+       
+       // Mass 2 net force
+       var mass2ForceY = mass2SpringForceY + mass * gravity - mass2DampingForceY;
+       //var mass2ForceX = mass2SpringForceX - mass2DampingForceX;
+       
+       // Mass 1 acceleration
+       var mass1AccelerationY = mass1ForceY/mass;
+       //var mass1AccelerationX = mass1ForceX/mass;
+       
+       // Mass 2 acceleration
+       var mass2AccelerationY = mass2ForceY/mass;
+       //var mass2AccelerationX = mass2ForceX/mass;
+       
+       // Mass 1 velocity
+       mass1VelocityY = mass1VelocityY + mass1AccelerationY * timeStep;
+       //mass1VelocityX = mass1VelocityX + mass1AccelerationX * timeStep;
+       
+       // Mass 2 velocity
+       mass2VelocityY = mass2VelocityY + mass2AccelerationY * timeStep;
+       //mass2VelocityX = mass2VelocityX + mass2AccelerationX * timeStep;
+       
+       // Mass 1 position
+       mass1PositionY = mass1PositionY + mass1VelocityY * timeStep;
+       //mass1PositionX = mass1PositionX + mass1VelocityX * timeStep;
+       
+       // Mass 2 position
+       mass2PositionY = mass2PositionY + mass2VelocityY * timeStep;
+       //mass2PositionX = mass2PositionX + mass2VelocityX * timeStep;
+      
+       animations[0].position.z = 0;//mass1PositionX * 0.1;
+       animations[0].position.y = mass1PositionY * myScale;
+       animations[1].position.z = 0;//mass2PositionX * 0.1;
+       animations[1].position.y = mass2PositionY * myScale;
+       
+       animations[0].position.x = animations[1].position.x = 0;       
+  });
 
   const base = new THREE.Group();
   renderer.addObject('Base', base);
   const initial = 20;
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 2; i++) {
     const sphere = getDefaultGeometry();
     sphere.userData.id = i+2;
     sphere.userData.v = 0;

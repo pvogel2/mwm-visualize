@@ -17,25 +17,9 @@ app.use('/res/js/assets/', express.static('res/js/'));
 app.use('/res/obj/', express.static('res/obj/'));
 app.use('/res/css/', express.static('res/css/'));
 app.use('/res/html/', express.static('res/html/'));
+app.use('/res/shaders/', express.static('res/shaders/'));
 
-app.use('/parse/openworld', function(req, res) {
-  const params = req.path.split("/").filter(item => !!item);
-  openworld.parseData(params)
-  .then(result => {
-    res.setHeader("Content-Type", "application/json");
-    if (result.pipe) {
-      console.log('piping data');
-      result.pipe(res);
-    } else {
-      console.log('sending data');
-      res.send(result);
-    }
-  })
-  .catch(error => console.error(error.stack));
-});
-
-app.use('/data/wbv2/', function(req, res) {
-
+app.use('/data/worldbank/', function(req, res) {
   const parts = url.parse(req.url, true);
 //http://api.worldbank.org/countries/bra;usa
   let country = '';
@@ -93,8 +77,6 @@ app.use('/data/wbv2/', function(req, res) {
   } else {
     console.log('unknown:', flag);
   }
-  // 
-  // 
 });
 
 app.use('/data/centroids', function(req, res){
@@ -109,7 +91,6 @@ app.use('/data/centroids', function(req, res){
 });
 
 app.use('/data/countries', function(req, res){
-  console.log('aaa');
   worldbank.countryQuery()
     .then(countries => {
       csv2json().fromFile('data/centroids/country_centroids_google.csv').then(centroids => {
@@ -160,26 +141,12 @@ app.use('/data/openworld', function(req, res) {
           }
         );
       } else {
-              res.setHeader("Content-Type", "application/json");
-              res.send(data);
-              return;
+        res.setHeader("Content-Type", "application/json");
+        res.send(source);
+        return;
       }
     })
     .catch(error => console.error(error.stack));
-});
-
-app.use('/dbf', function(req, res){
-  const dbf = require('./dbf.js');
-  dbf.getParsedData()
-  //openworld.getData(['populatedplaces','dbase'])
-    .then(data => {
-      res.setHeader("Content-Type", "application/json");
-      res.send(data);
-    })
-    .catch(err => {
-      console.log("error occured:", err);
-      res.send([]);
-    });
 });
 
 worldbank.init(err => {
