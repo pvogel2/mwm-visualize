@@ -54,18 +54,30 @@ document.addEventListener("DOMContentLoaded", function(event) {
   });
 
   window.togglePopulation = function (elem) {
-    console.log("load Population");
-    window.loadPopulation();
+    if(elem.MDCSwitch.checked) {
+      console.log("load Population");
+      window.loadPopulation();
+    } else {
+      window.unloadPopulation();
+    }
   }
 
   window.toggleRefugees = function (elem) {
-    console.log("load Refugees");
-    window.loadRefugees();
+    if(elem.MDCSwitch.checked) {
+      console.log("load Refugees");
+      window.loadRefugees();
+    } else {
+      window.unloadRefugees();
+    }
   }
 
   window.toggleRefugeesOrigin = function (elem) {
-    console.log("load RefugeesOrigin");
-    window.loadRefugeesOrigin();
+    if(elem.MDCSwitch.checked) {
+      console.log("load RefugeesOrigin");
+      window.loadRefugeesOrigin();
+    } else {
+      window.unloadRefugeesOrigin();
+    }
   }
 });
 
@@ -86,7 +98,7 @@ var ne = {
   },
   toggleLakes: elem => {
     if(elem.MDCSwitch.checked) {
-          loadFeature(getWorldSphere(), 0x0000aa, 'lakes','three');
+      loadFeature(getWorldSphere(), 0x0000aa, 'lakes','three');
     } else {
       removeFeature('lakes');
     }
@@ -97,6 +109,5 @@ var ne = {
     } else {
       removeFeature('geolines');
     }
-    
   }
 };

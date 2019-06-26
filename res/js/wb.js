@@ -13,6 +13,7 @@ var wb = {
   loadPopulation: () => fetch('/data/worldbank/country/;/indocators/SP.POP.TOTL/'),
   loadRefugees: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG/'),
   loadRefugeesOrigin: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG.OR/'),
+  loadIndicator: id => fetch(`/data/worldbank/country/;/indocators/${id}/`),
   getCountry: index => wb.data[index]
 };
 

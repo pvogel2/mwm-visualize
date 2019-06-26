@@ -50,55 +50,65 @@ function loadCapitals(parent, color) {
 };
 
 function loadPopulation() {
-  const p = wb.loadPopulation();
-  const color = 0x0000dd;
-  const parent = getWorldSphere();
+  const config = {
+    scale: 0.00000001,
+    lat: 0.3,
+    long:-0.33
+  };
 
-  p.then(
-    response => response.json()
-  ).then(json => {
-    createPopulationInstances(json, color, 0.00000001, '' + window._controls_.date, 'SP.POP.TOTL', {lat: 0.3, long:-0.33}).then(mesh => {
-      console.log('add populationBlocks');
-      renderer.addObject('populationBlocks', mesh, false, parent);
-    });
-  }).catch(function(err) {
-    console.log('err', err);
-  });
+  loadIndicator(getWorldSphere(), 0x0000dd, wb.SP_POP_TOTL, config);
 };
 
 function loadRefugees() {
-  const p = wb.loadRefugees();
-  const color = 0xdd0000;
-  const parent = getWorldSphere();
+  const config = {
+      scale: 0.00001,
+      lat: 0.3,
+      long:-0.99
+    };
 
-  p.then(
-    response => response.json()
-  ).then(json => {
-    createPopulationInstances(json, color, 0.00001, '' + window._controls_.date, 'SM.POP.REFG', {lat: 0.3, long:-0.99}).then(mesh => {
-      console.log('add refugeesBlocks');
-      renderer.addObject('refugeesBlocks', mesh, false, parent);
-    });
-  }).catch(function(err) {
-    console.log('err', err);
-  });
+    loadIndicator(getWorldSphere(), 0xdd0000, wb.SM_POP_REFG, config);
 };
 
 function loadRefugeesOrigin() {
-  const p = wb.loadRefugeesOrigin();
-  const color = 0x00dd00;
-  const parent = getWorldSphere();
+  const config = {
+    scale: 0.00001,
+    lat: 0.3,
+    long:-0.65
+  };
 
+  loadIndicator(getWorldSphere(), 0x00dd00, wb.SM_POP_REFG_OR, config);
+};
+
+function unloadPopulation() {
+  unloadIndicator(wb.SP_POP_TOTL);
+}
+
+function unloadRefugees() {
+  unloadIndicator(wb.SM_POP_REFG);
+}
+
+function unloadRefugeesOrigin() {
+  unloadIndicator(wb.SM_POP_REFG_OR);
+}
+
+function loadIndicator(parent, color, id, config) {
+  const p = wb.loadIndicator(id);
+  const objId = `${id.replace(/\./g, '_')}Blocks`;
   p.then(
     response => response.json()
   ).then(json => {
-    createPopulationInstances(json, color, 0.00001, '' + window._controls_.date, 'SM.POP.REFG.OR', {lat: 0.3, long:-1.65}).then(mesh => {
-      console.log('add refugeesOrigBlocks');
-      renderer.addObject('refugeesOrigBlocks', mesh, false, parent);
+    createPopulationInstances(json, color, config.scale, '' + window._controls_.date, id, {lat: config.lat, long: config.long}).then(mesh => {
+      console.log(`add ${objId}`);
+      renderer.addObject(objId, mesh, false, parent);
     });
   }).catch(function(err) {
     console.log('err', err);
   });
 };
+
+function unloadIndicator(id) {
+  renderer.removeObject(`${id.replace(/\./g, '_')}Blocks`);
+}
 
 function loadFeature(parent, color, id, type) {
   if (worldWorker) {
