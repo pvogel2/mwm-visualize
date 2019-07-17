@@ -4,6 +4,8 @@ class IPCC {
     this.timeIndex_ = -1;
     this.structure_ = {};
     this.textureMap = null;
+    this.textureWidth = 400;
+    this.textureHeight = 200;
 
     const slider = this.element_.querySelector('.mdc-slider.ipcc-time-slider');
     if (slider) {
@@ -13,23 +15,13 @@ class IPCC {
         this.update(this.slider_.value);
       });
     }
-    const threecontainer = document.querySelector('.ipcc-threejs-map');
-    if (threecontainer) {
-      this.threejs = {
-        renderer: new THREE.WebGLRenderer(),
-        scene: new THREE.Scene(),
-        width: 400,
-        hight: 200,
-      }
-      this.threejs.renderer.setSize(this.threejs.width, this.threejs.hight);
-      this.threejs.camera = new THREE.OrthographicCamera(
-        this.threejs.width / -2, this.threejs.width / 2,
-        this.threejs.hight / 2, this.threejs.hight / -2,
-        0.1, 1000
-      );
-      this.threejs.camera.position.z = 5;
-      threecontainer.appendChild(this.threejs.renderer.domElement);
-    }
+
+    this.renderer = new MWM.Renderer({
+      cameraType: 'orhtogonal',
+      parentSelector: '.ipcc-threejs-map',
+      width: this.textureWidth,
+      height: this.textureHeight,
+    });
   }
 
   loadStructure() {
@@ -71,23 +63,16 @@ class IPCC {
   updateUI(texture) {
     const year = this.calcYear_(this.structure_.indexValues[this.timeIndex_]);
     this.element_.querySelector('.ipcc_time .mdc-list-item__primary-text').innerText = year;
-    if (this.textureMap) {
-      this.threejs.scene.remove(this.textureMap);
-    }
+    this.renderer.removeObject('ipccTextureMap');
+
     if (texture) {
-      const geometry = new THREE.PlaneGeometry( this.threejs.width, this.threejs.hight);
+      const geometry = new THREE.PlaneGeometry( this.textureWidth, this.textureHeight);
       //const material = new THREE.MeshBasicMaterial( { map: this.texture } );
       const material = new THREE.MeshBasicMaterial( { map: texture } );
       this.textureMap = new THREE.Mesh( geometry, material );
 
-      this.threejs.scene.add(this.textureMap);
-
-      //this.textureMap.needsUpdate;
-      //this.textureMap.material.map.needsUpdate = true;
-      //this.textureMap.material.needsUpdate = true;
-      //this.textureMap.geometry.uvsNeedUpdate = true;
-
-      this.threejs.renderer.render( this.threejs.scene, this.threejs.camera );
+      this.renderer.addObject('ipccTextureMap', this.textureMap);
+      this.renderer.frame();
     }
   }
 

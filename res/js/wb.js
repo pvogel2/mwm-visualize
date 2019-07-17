@@ -52,7 +52,7 @@ class WBCtrl {
       console.log(`Value changed to ${event.detail.value}`);
     });
 
-
+    this.renderer = null;
   }
 
   getIndicators() {
@@ -63,6 +63,7 @@ class WBCtrl {
     this.country = wbCountry;
     this.countryElement_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
     this.countryElement_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
+    this.applyFilter();
   }
 
   getYear() {
@@ -78,19 +79,73 @@ class WBCtrl {
     this.countryElement_.style.display = 'block';
     this.globalElement_.style.display = 'block';
     this.yearSlider.layout();
+    if (!this.renderer) {
+      this.renderer = new MWM.Renderer({
+        cameraType: 'orhtogonal',
+        parentSelector: '.wb-threejs-map',
+        width: 400,
+        height: 200,
+      });
+    }
   }
 
+  getLine(data) {
+    const length = data.length;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array( length * 3 );
+    const colors = new Float32Array( length * 3 );
+
+    const defaultColor = new THREE.Color(0x00ff00);
+    const currentColor = new THREE.Color(0xff0000);
+
+    const oldest = Number(data[data.length - 1].date);
+    const latest = Number(data[0].date);
+    const max = 318622525;
+
+    for (let i = 0; i < length; i++) {
+        const date = data[i];
+        const x = 200 - i * 400 / length;
+        const y = (date.value ? date.value / max * 195 : 0) - 100;
+        console.log(Number(date.date), date.value, '->', x, y);
+        const v0 = new THREE.Vector3(x, y, 0);
+       
+        v0.toArray(positions, i * 3);
+        if (this.getYear() === Number(date.date)) {
+          currentColor.toArray(colors, i * 3);
+        } else {
+          defaultColor.toArray(colors, i * 3);
+        }
+    }
+
+    geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ));
+    geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ));
+    //s_geometry.addAttribute( 'helper', new THREE.BufferAttribute( s_helpers, 1 ));
+    // s_geometry.addAttribute( 'size', new THREE.BufferAttribute( s_sizes, 1 ));
+    // s_geometry.dynamic = true;
+    var material = new THREE.LineBasicMaterial({
+      vertexColors: THREE.VertexColors
+    });
+
+    return new THREE.Line( geometry, material );
+  }
   applyFilter() {
     if (this.country) {
       const p = wb.loadIndicator(wb.SP_POP_TOTL, this.country.iso2());
       p.then(
         response => response.json()
       ).then(json => {
-        console.log(json);
+        this.updateTextures(json);
       }).catch(function(err) {
         console.log('err', err);
       });
     }
+  }
+
+  updateTextures(json) {
+    this.renderer.removeObject('line1');
+    const line1 = this.getLine(json);
+    this.renderer.addObject('line1', line1);
+    this.renderer.frame();
   }
 
   handleEvent(event) {
