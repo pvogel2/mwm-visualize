@@ -112,13 +112,14 @@
         <li class="mdc-list-item ipcc_time">
           <span class="mdc-list-item__text">
             <span class="mdc-list-item__primary-text"></span>
-            <span class="mdc-list-item__secondary-text">Time</span>
+            <span class="mdc-list-item__secondary-text">Current Year</span>
           </span>
         </li>
       </ul>
+      <div class="mwm-md-time-slider--with-labels">
+      <div class="mwm-md-time-slider__min-label ipcc-time-slider__min-label"></div>
       <div class="mdc-slider mdc-slider--discrete ipcc-time-slider" tabindex="0" role="slider"
-         aria-valuemin="1850" aria-valuemax="2019" aria-valuenow="2014"
-         aria-label="Select Value">
+         aria-valuemin="1850" aria-valuemax="2019" aria-valuenow="2014">
         <div class="mdc-slider__track-container">
           <div class="mdc-slider__track"></div>
         </div>
@@ -131,6 +132,8 @@
           </svg>
           <div class="mdc-slider__focus-ring"></div>
         </div>
+      </div>
+      <div class="mwm-md-time-slider__max-label ipcc-time-slider__max-label"></div>
       </div>
     </div>
   </div>
@@ -183,21 +186,24 @@
   </div>
   <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="wb-global-card">
     <div class="demo-card__title mdc-typography--headline6">wb data global overview</div>
-      <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
-         aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014"
-         aria-label="Select Value">
-        <div class="mdc-slider__track-container">
-          <div class="mdc-slider__track"></div>
-        </div>
-        <div class="mdc-slider__thumb-container">
-          <div class="mdc-slider__pin">
-            <span class="mdc-slider__pin-value-marker"></span>
+      <div class="mwm-md-time-slider--with-labels">
+        <div class="mwm-md-time-slider__min-label">2000</div>
+        <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
+           aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014">
+          <div class="mdc-slider__track-container">
+            <div class="mdc-slider__track"></div>
           </div>
-          <svg class="mdc-slider__thumb" width="21" height="21">
-            <circle cx="10.5" cy="10.5" r="7.875"></circle>
-          </svg>
-          <div class="mdc-slider__focus-ring"></div>
+          <div class="mdc-slider__thumb-container">
+            <div class="mdc-slider__pin">
+              <span class="mdc-slider__pin-value-marker"></span>
+            </div>
+            <svg class="mdc-slider__thumb" width="21" height="21">
+              <circle cx="10.5" cy="10.5" r="7.875"></circle>
+            </svg>
+            <div class="mdc-slider__focus-ring"></div>
+          </div>
         </div>
+        <div class="mwm-md-time-slider__min-label">2017</div>
       </div>
       <ul class="mdc-list" aria-orientation="vertical">
         <li class="mdc-list-item">

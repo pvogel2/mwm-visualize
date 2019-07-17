@@ -48,8 +48,8 @@ class WBCtrl {
 
     this.yearSlider = new mdc.slider.MDCSlider(this.globalElement_.querySelector('.mdc-slider'));
 
-    this.yearSlider.listen('MDCSlider:change', () => {
-      console.log(`Value changed to ${this.yearSlider.value}`);
+    this.yearSlider.listen('MDCSlider:change', (event) => {
+      console.log(`Value changed to ${event.detail.value}`);
     });
 
 

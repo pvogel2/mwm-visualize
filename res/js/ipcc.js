@@ -50,8 +50,10 @@ class IPCC {
         }
       }
       if (this.slider_) {
-        this.slider_.min = 0;
-        this.slider_.max = this.structure_.recordDimension.length - 1;
+        this.slider_.min = this.calcYear_(this.structure_.indexValues[0]);
+        this.slider_.max = this.calcYear_(this.structure_.indexValues[this.structure_.recordDimension.length - 1]);
+        this.element_.querySelector('.ipcc-time-slider__min-label').innerText = this.slider_.min;
+        this.element_.querySelector('.ipcc-time-slider__max-label').innerText = this.slider_.max;
      }
       this.updateUI();
       this.element_.style.display = 'block';
@@ -62,8 +64,12 @@ class IPCC {
     });
   }
 
+  calcYear_(days) {
+    return Math.floor(days / 365) + 1850;
+  }
+
   updateUI(texture) {
-    const year = this.structure_.indexValues[this.timeIndex_] / 365 + 1850;
+    const year = this.calcYear_(this.structure_.indexValues[this.timeIndex_]);
     this.element_.querySelector('.ipcc_time .mdc-list-item__primary-text').innerText = year;
     if (this.textureMap) {
       this.threejs.scene.remove(this.textureMap);

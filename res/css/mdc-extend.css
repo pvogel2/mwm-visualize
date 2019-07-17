@@ -1,3 +1,14 @@
 .mdc-switch+label {
 	margin-left: 10px;
 }
+
+.mwm-md-time-slider--with-labels {
+  font-family: Roboto, sans-serif;
+  display: flex;
+  align-items: center;
+}
+
+.mwm-md-time-slider__min-label,
+.mwm-md-time-slider__max-label {
+  margin: 0px 10px;
+}
