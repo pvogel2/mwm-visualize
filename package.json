@@ -21,6 +21,7 @@
     "mwm-worldbank": "*",
     "node-dbf": "../node-dbf",
     "shapefile": "*",
-    "three": "^0.103.0"
+    "three": "^0.103.0",
+    "netcdfjs": ""
   }
 }

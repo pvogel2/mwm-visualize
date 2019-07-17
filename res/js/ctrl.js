@@ -5,51 +5,55 @@ document.addEventListener("DOMContentLoaded", function(event) {
     date: '2017'
     
   };
+
+  window.ipcc = new IPCC(document.querySelector('#ipcc-ctrl-card'));
+
+  window.wbCtrl = new WBCtrl(document.querySelector('#wb-country-card'), document.querySelector('#wb-global-card'));
+
+
   var fabMenuEl = document.querySelector('#fab_menu');
   var fabMenu = new mdc.menu.MDCMenu(fabMenuEl);
 
   var neCtrlCardEl = document.querySelector('#ne-ctrl-card');
-  var wbCtrlCardEl = document.querySelector('#wb-ctrl-card');
   var indCtrlCardEl = document.querySelector('#ind-ctrl-card');
 
   var textinput = indCtrlCardEl.querySelector('#indicator-text-field');
   var icon = indCtrlCardEl.querySelector('.mdc-text-field__icon');
-  window._indicators_ = ['SP.POP.TOTL', 'SM.POP.REFG', 'SM.POP.REFG.OR'];
-  icon.addEventListener('click', function(evt) {
+
+  /*icon.addEventListener('click', function(evt) {
     console.log(textinput.value);
     window._indicators_.push(textinput.value);
-  });
+  });*/
 
   window.toggleFabMenu = function(evt) {
     fabMenu.open = !fabMenu.open;
   };
 
-  const slider = new mdc.slider.MDCSlider(document.querySelector('.mdc-slider'));
-  window._controls_ = {
-      date: ('' + slider.value)
-  }
-
-  slider.listen('MDCSlider:change', () => {
-    console.log(`Value changed to ${slider.value}`);
-    window._controls_.date = slider.value;
-  });
-
   fabMenuEl.addEventListener('MDCMenu:selected', function(evt) {
      var detail = evt.detail;
      if (detail.index === 1) {
        neCtrlCardEl.style.display="block";
-       wbCtrlCardEl.style.display="none";
+       wbCtrl.hide();
        indCtrlCardEl.style.display="none";
+       ipcc.hide();
      }
      if (detail.index === 2) {
-       wbCtrlCardEl.style.display="block";
+       wbCtrl.show();
        neCtrlCardEl.style.display="none";
        indCtrlCardEl.style.display="none";
+       ipcc.hide();
      }
      if (detail.index === 3) {
        indCtrlCardEl.style.display="block";
        neCtrlCardEl.style.display="none";
-       wbCtrlCardEl.style.display="none";
+       wbCtrl.hide();
+       ipcc.hide();
+     }
+     if (detail.index === 4) {
+       indCtrlCardEl.style.display="none";
+       neCtrlCardEl.style.display="none";
+       wbCtrl.hide();
+       ipcc.loadStructure();
      }
   });
 

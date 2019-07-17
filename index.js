@@ -6,6 +6,7 @@ const url = require('url');
 const openworld = require('./lib/openworld');
 const worldbank = require('mwm-worldbank');
 const csv2json = require('csvtojson');
+const netcdf = require('./lib/netcdf');
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/res/html/index.html'));
 app.use('/res/js/three/', express.static('node_modules/three/'));
@@ -147,6 +148,39 @@ app.use('/data/openworld', function(req, res) {
       }
     })
     .catch(error => console.error(error.stack));
+});
+
+app.use('/data/ipcc/', function(req, res) {
+  const parts = url.parse(req.url, true);
+  let index = parts.query.index  || '';
+  const path = parts.path;
+  const elements = path.split("/");
+  elements.shift();
+  const flag = elements.shift();
+
+  if (flag === 'structure') {
+    netcdf.getStructure().then(data => {
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(data));
+    })
+    .catch(error => {
+      console.error(error.stack);
+     res.setHeader("Content-Type", "application/json");
+      res.statusCode = 500;
+      res.send(JSON.stringify({}));
+    });
+  } else {
+    netcdf.getData(index).then(data => {
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(data));
+    })
+    .catch(error => {
+      console.error(error.stack);
+     res.setHeader("Content-Type", "application/json");
+      res.statusCode = 500;
+      res.send(JSON.stringify({}));
+    });
+  }
 });
 
 worldbank.init(err => {

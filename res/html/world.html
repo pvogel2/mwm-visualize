@@ -11,6 +11,7 @@
     <script src="/res/js/mwm/bundle.js"></script>
     <!-- script src="/res/js/assets/renderer.js"></script-->
     <script src="/res/js/assets/wb.js"></script>
+    <script src="/res/js/assets/ipcc.js"></script>
     <script src="/res/js/assets/ctrl.js"></script>
     <script src="/res/js/assets/objects/city.js"></script>
     <script src="/res/js/assets/objects/pillar.js"></script>
@@ -49,50 +50,127 @@
         gl_FragColor = vec4( coreColor * inputSample.xyz, inputSample.a*(1.0-l) );
       }
   </script>
+    <script id="vertexshaderTest" type="x-shader/x-vertex">
+      attribute vec3 color;
+
+      varying vec3 vColor;
+      varying float distToCamera;
+
+      void main() {
+
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        distToCamera = -mvPosition.z;
+        gl_PointSize = 100. / distToCamera;
+
+        gl_Position = projectionMatrix * mvPosition;
+
+      }
+    </script>
+
+    <script id="fragmentshaderTest" type="x-shader/x-fragment">
+      varying vec3 vColor;
+
+      void main() {
+        vec3 halo = vec3(0.3,0.3,0.3);
+        float l = length(vec2(sin(3.14 * (gl_PointCoord.x - 0.5)),sin(3.14 * (gl_PointCoord.y - 0.5))));
+        gl_FragColor = vec4( vColor, 1. );
+      }
+  </script>
+
+    <script id="vertexshaderTemp" type="x-shader/x-vertex">
+      // attribute vec3 color;
+
+      varying vec3 vColor;
+
+      void main() {
+
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1 );
+
+        gl_Position = projectionMatrix * mvPosition;
+
+      }
+    </script>
+
+    <script id="fragmentshaderTemp" type="x-shader/x-fragment">
+      varying vec3 vColor;
+
+      void main() {
+        gl_FragColor = vec4( vColor, 1. );
+      }
+  </script>
   <div id="threejs-container" style="overflow:hidden;position:absolute;top:0px;bottom:0px;left:0px;right:0px">
   </div>
-  <div style="position:absolute;left:20px;top:20px;padding:20px;"  class="mdc-card" id="country-card">
-    <div class="demo-card__title mdc-typography--headline6 wb_title"><span class="wb_short_name"></span> <span class="wb_iso"></span></div>
-    <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle"></div>
+
+  <div style="position:absolute;left:20px;bottom:20px;padding:20px;display:none;"  class="mdc-card" id="ipcc-ctrl-card">
+    <div class="demo-card__title mdc-typography--headline6 wb_title"><span class="ipcc_glob_title"></span></div>
+    <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle"><span class="ipcc_glob_institution"></span></div>
     <div class="demo-card__content">
+      <div class="ipcc-threejs-map"></div>
       <ul class="mdc-list mdc-list--two-line" aria-orientation="vertical">
-			  <li class="mdc-list-item">
-			    <span class="mdc-list-item__text">
-			      <span class="mdc-list-item__primary-text wb_sp_pop_totl"></span>
-			      <span class="mdc-list-item__secondary-text">Total Population</span>
-			    </span>
-			  </li>
-			  <li class="mdc-list-item">
-			    <span class="mdc-list-item__text">
-			      <span class="mdc-list-item__primary-text wb_sm_pop_refg"></span>
-			      <span class="mdc-list-item__secondary-text">Total Refugees</span>
-			    </span>
-			  </li>
-			  <li class="mdc-list-item">
-			    <span class="mdc-list-item__text">
-			      <span class="mdc-list-item__primary-text wb_sm_pop_refg_or"></span>
-			      <span class="mdc-list-item__secondary-text">Total Refugees Origin</span>
-			    </span>
-			  </li>
+        <li class="mdc-list-item ipcc_time">
+          <span class="mdc-list-item__text">
+            <span class="mdc-list-item__primary-text"></span>
+            <span class="mdc-list-item__secondary-text">Time</span>
+          </span>
+        </li>
       </ul>
-      <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
-		     aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014"
-		     aria-label="Select Value">
-			  <div class="mdc-slider__track-container">
-			    <div class="mdc-slider__track"></div>
-			  </div>
-			  <div class="mdc-slider__thumb-container">
-			    <div class="mdc-slider__pin">
-			      <span class="mdc-slider__pin-value-marker"></span>
-			    </div>
-			    <svg class="mdc-slider__thumb" width="21" height="21">
-			      <circle cx="10.5" cy="10.5" r="7.875"></circle>
-			    </svg>
-			    <div class="mdc-slider__focus-ring"></div>
-			  </div>
+      <div class="mdc-slider mdc-slider--discrete ipcc-time-slider" tabindex="0" role="slider"
+         aria-valuemin="1850" aria-valuemax="2019" aria-valuenow="2014"
+         aria-label="Select Value">
+        <div class="mdc-slider__track-container">
+          <div class="mdc-slider__track"></div>
+        </div>
+        <div class="mdc-slider__thumb-container">
+          <div class="mdc-slider__pin">
+            <span class="mdc-slider__pin-value-marker"></span>
+          </div>
+          <svg class="mdc-slider__thumb" width="21" height="21">
+            <circle cx="10.5" cy="10.5" r="7.875"></circle>
+          </svg>
+          <div class="mdc-slider__focus-ring"></div>
+        </div>
       </div>
     </div>
   </div>
+
+  <div style="position:absolute;left:20px;bottom:20px;padding:20px;display:none;"  class="mdc-card" id="wb-country-card">
+    <div class="demo-card__title mdc-typography--headline6 wb_title">
+      <span>wb data by country</span>
+    </div>
+    <div class="demo-card__content">
+      <div class="mdc-text-field mdc-text-field--with-trailing-icon wb-country-filter mdc-text-field--no-label">
+        <input type="text" id="wb-country-input" class="mdc-text-field__input" placeholder="Country">
+        <i class="material-icons mdc-text-field__icon" tabindex="0" role="button">event</i>
+        <div class="mdc-line-ripple"></div>
+      </div>
+      <div class="mdc-text-field-helper-line">
+        <div class="mdc-text-field-helper-text mdc-text-field-helper-text--persistent wb_income">type of income</div>
+      </div>
+      <ul class="mdc-list mdc-list--two-line" aria-orientation="vertical">
+    	  <li class="mdc-list-item">
+    	    <span class="mdc-list-item__text">
+    	      <span class="mdc-list-item__primary-text wb_sp_pop_totl"></span>
+    	      <span class="mdc-list-item__secondary-text">Total Population</span>
+    	    </span>
+    	  </li>
+    	  <li class="mdc-list-item">
+    	    <span class="mdc-list-item__text">
+    	      <span class="mdc-list-item__primary-text wb_sm_pop_refg"></span>
+    	      <span class="mdc-list-item__secondary-text">Total Refugees</span>
+    	    </span>
+    	  </li>
+    	  <li class="mdc-list-item">
+    	    <span class="mdc-list-item__text">
+    	      <span class="mdc-list-item__primary-text wb_sm_pop_refg_or"></span>
+    	      <span class="mdc-list-item__secondary-text">Total Refugees Origin</span>
+    	    </span>
+    	  </li>
+      </ul>
+    </div>
+  </div>
+
   <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="ind-ctrl-card">
     <div class="demo-card__title mdc-typography--headline6">add indicator</div>
       <div class="mdc-text-field mdc-text-field--with-trailing-icon">
@@ -103,8 +181,24 @@
       </div>
     </div>
   </div>
-  <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="wb-ctrl-card">
-    <div class="demo-card__title mdc-typography--headline6">worldbank</div>
+  <div style="position:absolute;right:20px;top:20px;padding:20px;display:none;"  class="mdc-card" id="wb-global-card">
+    <div class="demo-card__title mdc-typography--headline6">wb data global overview</div>
+      <div class="mdc-slider mdc-slider--discrete" tabindex="0" role="slider"
+         aria-valuemin="2000" aria-valuemax="2017" aria-valuenow="2014"
+         aria-label="Select Value">
+        <div class="mdc-slider__track-container">
+          <div class="mdc-slider__track"></div>
+        </div>
+        <div class="mdc-slider__thumb-container">
+          <div class="mdc-slider__pin">
+            <span class="mdc-slider__pin-value-marker"></span>
+          </div>
+          <svg class="mdc-slider__thumb" width="21" height="21">
+            <circle cx="10.5" cy="10.5" r="7.875"></circle>
+          </svg>
+          <div class="mdc-slider__focus-ring"></div>
+        </div>
+      </div>
       <ul class="mdc-list" aria-orientation="vertical">
         <li class="mdc-list-item">
           <div class="mdc-switch" onchange="togglePopulation(this)" data-mdc-auto-init="MDCSwitch">
@@ -227,6 +321,9 @@
         </li>
         <li class="mdc-list-item" role="menuitem" tabindex="0">
           indicators
+        </li>
+        <li class="mdc-list-item" role="menuitem" tabindex="0">
+          ipcc
         </li>
 		  </ul>
      </div>

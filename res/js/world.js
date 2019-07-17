@@ -75,7 +75,7 @@ function loadIndicator(parent, color, id, config) {
   p.then(
     response => response.json()
   ).then(json => {
-    createIndicatorInstances(json, color, config.scale, '' + window._controls_.date, id, {lat: config.lat, long: config.long}).then(mesh => {
+    createIndicatorInstances(json, color, config.scale, '' + wbCtrl.getYear(), id, {lat: config.lat, long: config.long}).then(mesh => {
       console.log(`add ${objId}`);
       renderer.addObject(objId, mesh, false, parent);
     });
@@ -269,7 +269,7 @@ function createCentroids(data, parent, color) {
   //var lines = new THREE.LineSegments( s_geometry, s_material );
   //renderer.addObject( 'citypoints', points, false );
   //parent.add(centroids);
-  renderer.addObject( 'centroids', centroids , false, parent);
+  renderer.addObject( 'centroids', centroids , true, parent);
 }
 
 function createFeature(data, color) {
@@ -325,6 +325,91 @@ function createFeature(data, color) {
   return new THREE.Line( s_geometry, s_material );
 }
 
+function createTemperatureInstance(data) {
+  const grid = ipcc.getGrid();
+
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array( data.length * 3 );
+  const colors = new Float32Array( data.length * 3 );
+
+  const material = new THREE.ShaderMaterial({
+    depthWrite: false,
+    transparent: true,
+    vertexShader:   document.getElementById( 'vertexshaderTest' ).textContent,
+    fragmentShader: document.getElementById( 'fragmentshaderTest' ).textContent
+    /*vertexColors: THREE.VertexColors,
+    vertexShader : 'varying vec4 vColor;\n\tvoid main() {\n\tvColor = vec4( color, 1.0 );\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}',
+    fragmentShader : 'varying vec4 vColor;\n\tvoid main() {\n\tgl_FragColor = vColor;\n}'*/
+  });
+
+  let totalCount = 0;
+  var rank_anomaly_map = ipcc.getColorMap()
+  const blackColor = new THREE.Color( 0x010101);
+  const tmp_data = new Uint8Array(3 * grid.longitude.length * grid.latitude.length);
+
+  for (let i_lat = 0; i_lat < grid.latitude.length; i_lat++) {
+    const curr_lat = grid.latitude[i_lat];
+
+    for (let i_long = 0; i_long < grid.longitude.length; i_long++) {
+      const curr_long = grid.longitude[i_long];
+
+      var s0 = calcSphericalFromLatLongRad(curr_lat, curr_long, 20.25);
+      var v0 = new THREE.Vector3().setFromSpherical(s0);
+      var value = data[totalCount];
+      v0.toArray(positions, totalCount * 3);
+
+      if(-1.0000000150474662e+30 === value) {
+       blackColor.toArray( colors, totalCount * 3);
+        tmp_data[totalCount * 3] = 255 * blackColor.r;
+        tmp_data[totalCount * 3 + 1] = 255 * blackColor.g;
+        tmp_data[totalCount * 3 + 2] = 255 * blackColor.b;
+      } else {
+        const baseColor = rank_anomaly_map[0].color;
+        tmp_data[totalCount * 3] = 255 * baseColor.r;
+        tmp_data[totalCount * 3 + 1] = 255 * baseColor.g;
+        tmp_data[totalCount * 3 + 2] = 255 * baseColor.b;
+        const valueMaped = rank_anomaly_map.find(m => {
+          return m.step >= value;
+        });
+        if (valueMaped) {
+         valueMaped.color.toArray(colors, totalCount * 3);
+          tmp_data[totalCount * 3] = 255 * valueMaped.color.r;
+          tmp_data[totalCount * 3 + 1] = 255 * valueMaped.color.g;
+          tmp_data[totalCount * 3 + 2] = 255 * valueMaped.color.b;
+        } else {
+          baseColor.toArray(colors, totalCount * 3);
+          tmp_data[totalCount * 3] = 255 * baseColor.r;
+          tmp_data[totalCount * 3 + 1] = 255 * baseColor.g;
+          tmp_data[totalCount * 3 + 2] = 255 * baseColor.b;
+        }
+      }
+      totalCount++;
+    }
+  }
+
+  geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ));
+  geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ));
+
+  const points = new THREE.Points( geometry, material);
+  const parent = getWorldSphere();
+  //renderer.addObject( 'ipccTemp01', points , false, parent);
+
+  const texture = new THREE.DataTexture( tmp_data, grid.longitude.length, grid.latitude.length, THREE.RGBFormat, THREE.UnsignedByteTyp, THREE.UVMapping);
+  texture.needsUpdate = true;
+
+  parent.material.map = texture;
+  parent.material.color = new THREE.Color( 1, 1, 1);
+  parent.material.map.needsUpdate = true;
+  parent.material.needsUpdate = true;
+  parent.geometry.uvsNeedUpdate = true;
+
+  return texture;
+};
+
+function removeTemperatureInstance() {
+  renderer.removeObject('ipccTemp01');
+};
+
 function calcSphericalFromLatLongRad(lat, long, r) {
     var phi   = (90-lat)*(Math.PI/180);
     var theta = (long+180)*(Math.PI/180);
@@ -344,7 +429,6 @@ function pushOrientationFromSpherical(s, target) {
 
 function getWorldSphere() {
   if (!window._worldSphere) {
-    //const earthTexture = renderer.getTexture('GRAY_HR_SR_W.jpg');
     const geometry = new THREE.SphereGeometry( 20, 64, 64 );
     //  var obj = new THREE.Mesh( object, new THREE.MeshPhongMaterial( {glowMap : emap,reflectivity :0.5, map : dmap, specularMap :smap, bumpMap :bmap , bumpScale : 0.005} ));
     //const material = new THREE.MeshPhongMaterial( {map: earthTexture, bumpMap : earthTexture, bumpScale :0.2} );
@@ -359,6 +443,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
   const animations = [];
   renderer = new MWM.Renderer({});
   renderer.res = '/res/obj/';
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
   const worldSphere = getWorldSphere();
 
@@ -429,15 +516,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
         intersected.object.geometry.attributes.size.array[intersected.index] = 400;
         intersected.object.geometry.attributes.size.needsUpdate = true;
 
-        const date_year = window._controls_.date;
-        const indicators = window._indicators_;
+        const date_year = wbCtrl.getYear();
+        const indicators = wbCtrl.getIndicators();
         const wbCountry = new WBCountry(wb.getCountry(intersected.index));
-        const iso2Code = wbCountry.iso2();
 
-        document.querySelector('.wb_title .wb_short_name').textContent = wbCountry.name();
-        document.querySelector('.wb_title .wb_iso').textContent = `(${iso2Code})`;
-        document.querySelector('.wb_subtitle').textContent = `${wbCountry.incomeValue()} (${wbCountry.incomeId()})`;
-
+        wbCtrl.setCountry(wbCountry);
 
         (async function() {
           const iso2Code = wbCountry.iso2();

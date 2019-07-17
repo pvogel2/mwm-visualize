@@ -13,8 +13,8 @@ var wb = {
   loadPopulation: () => fetch('/data/worldbank/country/;/indocators/SP.POP.TOTL/'),
   loadRefugees: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG/'),
   loadRefugeesOrigin: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG.OR/'),
-  loadIndicator: id => fetch(`/data/worldbank/country/;/indocators/${id}/`),
-  getCountry: index => wb.data[index]
+  loadIndicator: (id, country = ';') => fetch(`/data/worldbank/country/${country}/indocators/${id}/`),
+  getCountry: index => wb.data[index],
 };
 
 /**
@@ -35,6 +35,72 @@ var wb = {
   "decimal": 0
   }
 */
+
+class WBCtrl {
+  constructor(countryElement, globalElement) {
+    this.countryElement_ = countryElement;
+    this.globalElement_ = globalElement;
+    this.countryFilter_ = null;
+    this.country = null;
+
+    const filterIcon = this.countryElement_.querySelector('.mdc-text-field__icon');
+    filterIcon.addEventListener('click', this);
+
+    this.yearSlider = new mdc.slider.MDCSlider(this.globalElement_.querySelector('.mdc-slider'));
+
+    this.yearSlider.listen('MDCSlider:change', () => {
+      console.log(`Value changed to ${this.yearSlider.value}`);
+    });
+
+
+  }
+
+  getIndicators() {
+    return ['SP.POP.TOTL', 'SM.POP.REFG', 'SM.POP.REFG.OR'];
+  }
+
+  setCountry(wbCountry) {
+    this.country = wbCountry;
+    this.countryElement_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
+    this.countryElement_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
+  }
+
+  getYear() {
+    return this.yearSlider.value;
+  }
+
+  hide() {
+    this.countryElement_.style.display = 'none';
+    this.globalElement_.style.display = 'none';
+  }
+
+  show() {
+    this.countryElement_.style.display = 'block';
+    this.globalElement_.style.display = 'block';
+    this.yearSlider.layout();
+  }
+
+  applyFilter() {
+    if (this.country) {
+      const p = wb.loadIndicator(wb.SP_POP_TOTL, this.country.iso2());
+      p.then(
+        response => response.json()
+      ).then(json => {
+        console.log(json);
+      }).catch(function(err) {
+        console.log('err', err);
+      });
+    }
+  }
+
+  handleEvent(event) {
+    if (event.type === 'click') {
+      this.countryFilter_ = this.countryElement_.querySelector('.wb-country-filter input').value;
+      this.applyFilter();
+    }
+  }
+}
+
 class WBIndicatorItem {
   static filter(items, iso2, id) {
     return items.filter(item => {   
