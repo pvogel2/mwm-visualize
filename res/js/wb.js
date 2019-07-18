@@ -50,6 +50,8 @@ class WBCtrl {
 
     this.yearSlider.listen('MDCSlider:change', (event) => {
       console.log(`Value changed to ${event.detail.value}`);
+      this.updateControls();
+      this.updateGraphs();
     });
 
     this.renderer = null;
@@ -59,8 +61,13 @@ class WBCtrl {
     return ['SP.POP.TOTL', 'SM.POP.REFG', 'SM.POP.REFG.OR'];
   }
 
-  setCountry(wbCountry) {
-    this.country = wbCountry;
+  setCountry(index) {
+    const countryData = wb.getCountry(index);
+    if (!countryData) {
+      console.log(`wb: can not set country, unknown index ${index}`);
+      return;
+    }
+    this.country = new WBCountry(countryData);
     this.countryElement_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
     this.countryElement_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
     this.applyFilter();
@@ -89,62 +96,119 @@ class WBCtrl {
     }
   }
 
-  getLine(data) {
-    const length = data.length;
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array( length * 3 );
-    const colors = new Float32Array( length * 3 );
+  createLines() {
+    const indicators = this.getIndicators();
+    const lines = [];
+    indicators.forEach(indicator => {
+      const data = this.country.data.indicators[indicator.replace(/\./g, '_')];
+      const length = data.length;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array( length * 3 );
+      const colors = new Float32Array( length * 3 );
+  
+      const defaultColor = new THREE.Color(0x00ff00);
+      const currentColor = new THREE.Color(0xff0000);
+  
+      const oldest = Number(data[data.length - 1].date);
+      const latest = Number(data[0].date);
+      const max = 318622525;
+  
+      const indices = [];
 
-    const defaultColor = new THREE.Color(0x00ff00);
+      for (let i = 0; i < length; i++) {
+          const date = data[i];
+          const x = 200 - i * 400 / length;
+          const y = (date.value ? date.value / max * 195 : 0) - 100;
+          console.log(Number(date.date), date.value, '->', x, y);
+          const v0 = new THREE.Vector3(x, y, 0);
+         
+          v0.toArray(positions, i * 3);
+          if (this.getYear() === Number(date.date)) {
+            currentColor.toArray(colors, i * 3);
+            indices.push(i);
+          } else {
+            defaultColor.toArray(colors, i * 3);
+          }
+      }
+  
+      geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ));
+      geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ));
+      //s_geometry.addAttribute( 'helper', new THREE.BufferAttribute( s_helpers, 1 ));
+      // s_geometry.addAttribute( 'size', new THREE.BufferAttribute( s_sizes, 1 ));
+      // s_geometry.dynamic = true;
+      var material = new THREE.LineBasicMaterial({
+        vertexColors: THREE.VertexColors
+      });
+      const line = new THREE.Line( geometry, material );
+      line.userData.indices = indices;
+      lines.push(line);
+    });
+    return lines;
+  }
+  async applyFilter() {
+    if (this.country) {
+      //const p = wb.loadIndicator(wb.SP_POP_TOTL, this.country.iso2());
+      const indicators = this.getIndicators();
+      const iso2Code = this.country.iso2();
+
+      if (!this.country.hasIndicators()) {
+        const json = await fetch(`/data/worldbank/country/${iso2Code}/indocators/${indicators.join(';')}/`).then(
+          response => response.json()
+        );
+
+        indicators.forEach(id => {
+          this.country.extendIndicators(id, WBIndicatorItem.filter(json, iso2Code, id));
+        });
+      }
+      this.writeGraphs();
+      this.updateControls();
+    }
+  }
+
+  updateControls() {
+    const indicators = this.getIndicators();
+    indicators.forEach(indicator => {
+      const selector = `.wb_${indicator.toLowerCase().replace(/\./g, '_')}`;
+      this.countryElement_.querySelector(selector).textContent = this.country.findIndicatorValue(indicator, this.getYear());
+    });
+  }
+
+  updateGraphs() {
+    const indicators = this.getIndicators();
+    const defaultColor = new THREE.Color(0x00ffff);
     const currentColor = new THREE.Color(0xff0000);
 
-    const oldest = Number(data[data.length - 1].date);
-    const latest = Number(data[0].date);
-    const max = 318622525;
+    indicators.forEach((indicator, i) => {
+      const item = this.renderer.getObject(`wbLine${i}`);
+      const line = item.obj;
+      const colors = line.geometry.attributes.color.array;
+      const data = this.country.data.indicators[indicator.replace(/\./g, '_')];
+      const newIndex = this.country.findIndicatorIndex(indicator, this.getYear());
 
-    for (let i = 0; i < length; i++) {
-        const date = data[i];
-        const x = 200 - i * 400 / length;
-        const y = (date.value ? date.value / max * 195 : 0) - 100;
-        console.log(Number(date.date), date.value, '->', x, y);
-        const v0 = new THREE.Vector3(x, y, 0);
-       
-        v0.toArray(positions, i * 3);
-        if (this.getYear() === Number(date.date)) {
-          currentColor.toArray(colors, i * 3);
-        } else {
-          defaultColor.toArray(colors, i * 3);
+      if (line) {
+        const indices = line.userData.indices;
+        indices.forEach(index => {
+          defaultColor.toArray(colors, index * 3);
+        });
+        line.userData.indices = [];
+
+        if (newIndex >= 0) {
+          currentColor.toArray(colors, newIndex * 3);
+          line.userData.indices.push(newIndex);
         }
-    }
-
-    geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ));
-    geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ));
-    //s_geometry.addAttribute( 'helper', new THREE.BufferAttribute( s_helpers, 1 ));
-    // s_geometry.addAttribute( 'size', new THREE.BufferAttribute( s_sizes, 1 ));
-    // s_geometry.dynamic = true;
-    var material = new THREE.LineBasicMaterial({
-      vertexColors: THREE.VertexColors
+      }
+      line.geometry.attributes.color.needsUpdate = true;
     });
-
-    return new THREE.Line( geometry, material );
-  }
-  applyFilter() {
-    if (this.country) {
-      const p = wb.loadIndicator(wb.SP_POP_TOTL, this.country.iso2());
-      p.then(
-        response => response.json()
-      ).then(json => {
-        this.updateTextures(json);
-      }).catch(function(err) {
-        console.log('err', err);
-      });
-    }
+    this.renderer.frame();
   }
 
-  updateTextures(json) {
-    this.renderer.removeObject('line1');
-    const line1 = this.getLine(json);
-    this.renderer.addObject('line1', line1);
+  writeGraphs() {
+    const lines = this.createLines();
+
+    lines.forEach((line, i) => {
+      this.renderer.removeObject(`wbLine${i}`);
+      this.renderer.addObject(`wbLine${i}`, line);
+    });
     this.renderer.frame();
   }
 
@@ -220,6 +284,12 @@ class WBCountry {
       });
     }
     return found;
+  }
+
+  findIndicatorIndex(id, date_year) {
+    return this.data.indicators[id.replace(/\./g, '_')].findIndex(item => {
+      return (`${date_year}` === item.date);
+    });
   }
 
   findIndicatorValue(id, date_year) {

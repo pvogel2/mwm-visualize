@@ -508,37 +508,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
       });
     }
-    if (intersected) {
-      if (intersected.index != null) {
-        intersected.object.geometry.attributes.size.array[intersected.index] = 400;
-        intersected.object.geometry.attributes.size.needsUpdate = true;
+    if (intersected && intersected.index != null) {
+      intersected.object.geometry.attributes.size.array[intersected.index] = 400;
+      intersected.object.geometry.attributes.size.needsUpdate = true;
 
-        const date_year = wbCtrl.getYear();
-        const indicators = wbCtrl.getIndicators();
-        const wbCountry = new WBCountry(wb.getCountry(intersected.index));
-
-        wbCtrl.setCountry(wbCountry);
-
-        (async function() {
-          const iso2Code = wbCountry.iso2();
-          if (iso2Code) {
-            if (!wbCountry.hasIndicators(indicators)) {
-              const json = await fetch(`/data/worldbank/country/${iso2Code}/indocators/${indicators.join(';')}/`).then(
-                response => response.json()
-              );
-
-              indicators.forEach(id => {
-                wbCountry.extendIndicators(id, WBIndicatorItem.filter(json, iso2Code, id));
-              });
-            }
-
-            indicators.forEach(id => {
-              const selector = `.wb_${id.toLowerCase().replace(/\./g, '_')}`
-              document.querySelector(selector).textContent = wbCountry.findIndicatorValue(id, date_year);
-            });
-          }
-        }());
-      }
+      wbCtrl.setCountry(intersected.index);
     }
   });
 
