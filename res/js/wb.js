@@ -146,23 +146,14 @@ class WBCtrl {
     return lines;
   }
   async applyFilter() {
+    const indicators = this.getIndicators();
+
     if (this.country) {
-      //const p = wb.loadIndicator(wb.SP_POP_TOTL, this.country.iso2());
-      const indicators = this.getIndicators();
-      const iso2Code = this.country.iso2();
-
-      if (!this.country.hasIndicators()) {
-        const json = await fetch(`/data/worldbank/country/${iso2Code}/indocators/${indicators.join(';')}/`).then(
-          response => response.json()
-        );
-
-        indicators.forEach(id => {
-          this.country.extendIndicators(id, WBIndicatorItem.filter(json, iso2Code, id));
-        });
-      }
-      this.writeGraphs();
-      this.updateControls();
+      await this.country.ensureIndicators(indicators);
     }
+
+    this.writeGraphs();
+    this.updateControls();
   }
 
   updateControls() {
@@ -276,6 +267,7 @@ class WBCountry {
   _indicators() {
     return !!this.data.indicators;
   }
+
   hasIndicators(ids) {
     let found = !!this.data.indicators;
     if (found) {
@@ -304,5 +296,19 @@ class WBCountry {
       this.data.indicators = {};
     }
     this.data.indicators[id.replace(/\./g, '_')] = ind;
+  }
+
+  async ensureIndicators(ids) {
+    if (!this.hasIndicators(ids)) {
+      const iso2Code = this.iso2();
+
+      const json = await fetch(`/data/worldbank/country/${iso2Code}/indocators/${ids.join(';')}/`).then(
+        response => response.json()
+      );
+
+      ids.forEach(id => {
+        this.extendIndicators(id, WBIndicatorItem.filter(json, iso2Code, id));
+      });
+    }
   }
 }
