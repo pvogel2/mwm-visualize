@@ -582,5 +582,56 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
   });
 
+  renderer.registerEventCallback("move", (event, intersections) => {
+    // var offset = renderer.three.renderer.domElement.offset();
+    // console.log('intersections', intersections);
+    const widthHalf = 0.5 * renderer.three.renderer.context.canvas.width;
+    const heightHalf = 0.5 * renderer.three.renderer.context.canvas.height;
+    
+    let intersected;
+    const div = document.querySelector("#wb-three-country-label");
+
+    if (intersections && intersections.length) {
+      intersections.forEach(item => {
+        if (!intersected || intersected.distanceToRay > item.distanceToRay) {
+          intersected = item;
+        }
+      });
+    }
+
+    if (intersected && intersected.index != null) {
+      const vector = intersected.point;
+      const country = wb.getCountry(intersected.index);
+      const frustum = new THREE.Frustum();
+
+      frustum.setFromMatrix(
+        new THREE.Matrix4().multiplyMatrices(
+          renderer.three.camera.projectionMatrix,
+          renderer.three.camera.matrixWorldInverse
+        )
+      );
+
+
+
+      if(frustum.containsPoint( vector )){
+        vector.project(renderer.three.camera);
+
+        vector.x = ( vector.x * widthHalf ) + widthHalf + 20;
+        vector.y = - ( vector.y * heightHalf ) + heightHalf + 5;
+
+        div.innerText = `${country.name()} (${country.iso2()})`; 
+        div.style.top = `${vector.y}px`;
+        div.style.left = `${vector.x}px`;
+        div.style.display = 'block';
+      } else {
+        div.style.display = 'none';
+        div.innerText = '';
+      }
+    } else {
+      div.style.display = 'none';
+      div.innerText = '';
+    }
+  });
+
   renderer.start();
 });

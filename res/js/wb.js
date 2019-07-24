@@ -14,7 +14,10 @@ var wb = {
   loadRefugees: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG/'),
   loadRefugeesOrigin: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG.OR/'),
   loadIndicator: (id, country = ';') => fetch(`/data/worldbank/country/${country}/indocators/${id}/`),
-  getCountry: index => wb.data[index],
+  getCountry: index => {
+    const data = wb.data[index];
+    return (data ? new WBCountry(data) : null);
+  },
 };
 
 /**
@@ -67,12 +70,11 @@ class WBCtrl {
   }
 
   setCountry(index) {
-    const countryData = wb.getCountry(index);
-    if (!countryData) {
+    this.country = wb.getCountry(index);
+    if (!this.country) {
       console.log(`wb: can not set country, unknown index ${index}`);
       return;
     }
-    this.country = new WBCountry(countryData);
     this.element_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
     this.element_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
     this.applyFilter();
@@ -232,6 +234,8 @@ class WBCtrl {
   }
 
   writeGraphs() {
+    if (!this.renderer) return;
+
     const lines = this.createLines();
 
     lines.forEach((line, i) => {
