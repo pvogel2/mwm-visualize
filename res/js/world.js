@@ -37,6 +37,14 @@ function loadPopulation() {
   loadIndicator(getWorldSphere(), 0x0000dd, wb.SP_POP_TOTL, config);
 };
 
+function updatePopulation() {
+  const config = {
+      scale: 0.00000001
+    };
+
+  updateIndicator(wb.SP_POP_TOTL, config);
+}
+
 function loadRefugees() {
   const config = {
       scale: 0.00001,
@@ -47,6 +55,14 @@ function loadRefugees() {
     loadIndicator(getWorldSphere(), 0xdd0000, wb.SM_POP_REFG, config);
 };
 
+function updateRefugees() {
+  const config = {
+      scale: 0.00001
+    };
+
+  updateIndicator(wb.SM_POP_REFG, config);
+}
+
 function loadRefugeesOrigin() {
   const config = {
     scale: 0.00001,
@@ -56,6 +72,14 @@ function loadRefugeesOrigin() {
 
   loadIndicator(getWorldSphere(), 0x00dd00, wb.SM_POP_REFG_OR, config);
 };
+
+function updateRefugeesOrigin() {
+  const config = {
+      scale: 0.00001
+    };
+
+  updateIndicator(wb.SM_POP_REFG_OR, config);
+}
 
 function unloadPopulation() {
   unloadIndicator(wb.SP_POP_TOTL);
@@ -76,13 +100,51 @@ function loadIndicator(parent, color, id, config) {
     response => response.json()
   ).then(json => {
     createIndicatorInstances(json, color, config.scale, '' + wbCtrl.getYear(), id, {lat: config.lat, long: config.long}).then(mesh => {
-      console.log(`add ${objId}`);
       renderer.addObject(objId, mesh, false, parent);
     });
   }).catch(function(err) {
     console.log('err', err);
   });
 };
+
+function updateIndicator(id, config) {
+  const p = wb.loadIndicator(id);
+  const objId = `${id.replace(/\./g, '_')}Blocks`;
+  p.then(
+    response => response.json()
+  ).then(json => {
+    updateIndicatorInstances(json, config.scale, '' + wbCtrl.getYear(), id);
+  });
+}
+
+function updateIndicatorInstances(data, scale, year, id) {
+  const objId = `${id.replace(/\./g, '_')}Blocks`;
+  const renderObj = renderer.getObject(objId);
+  if (!renderObj) return;
+
+  const mesh = renderObj.obj;
+
+  let attribIndex = 0;
+  for (var i = 0; i < data.length; i++) {
+    var date = data[i];
+    var wb_country = wb.map[date.country.id.toLowerCase()];
+
+
+    if (wb_country && date.date === year && date.indicator.id === id) {
+      const newIdx = mesh.material.uniforms.weight.value >= 1.0 ? attribIndex * 2 : attribIndex * 2 + 1;
+      mesh.geometry.attributes.value.array[newIdx] = scale * date.value || 0.0;//(200000000.0 + mesh.material.uniforms.weight.value * 200000000.0);//date.value || 0.0;
+      attribIndex++;
+    } else {
+      //console.log("no wb_Country", date.iso2.toLowerCase(), date);
+      continue;
+    }
+  }
+  mesh.geometry.attributes.value.needsUpdate = true;
+  PillarTemplate.triggerTransition(mesh, {
+    duration: 0.25,
+    target: (mesh.material.uniforms.weight.value >= 1.0 ? 0.0 : 1.0),
+  });
+}
 
 function unloadIndicator(id) {
   renderer.removeObject(`${id.replace(/\./g, '_')}Blocks`);
@@ -123,6 +185,7 @@ async function createIndicatorInstances(data, color, scale, year, id, offset) {
 
     if (wb_country && date.date === year && date.indicator.id === id) {
       var s0 = calcSphericalFromLatLongRad(Number(wb_country.center.latitude)+offset.lat, Number(wb_country.center.longitude)+offset.long, 20.025);
+      values.push(0.0);
       values.push(scale * date.value || 0.0);
     } else {
       //console.log("no wb_Country", date.iso2.toLowerCase(), date);
@@ -139,9 +202,12 @@ async function createIndicatorInstances(data, color, scale, year, id, offset) {
   pillar.geometry.maxInstancedCount = instanceCounter;
   pillar.geometry.addAttribute( 'offset', new THREE.InstancedBufferAttribute( new Float32Array( offsets ), 3 ) );
   pillar.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( orientations ), 4 ) );
-  pillar.geometry.addAttribute( 'value', new THREE.InstancedBufferAttribute( new Float32Array( values ), 1 ) );
+  pillar.geometry.addAttribute( 'value', new THREE.InstancedBufferAttribute( new Float32Array( values ), 2 ) );
 
   const mesh = await pillar.getMesh(renderer);
+  PillarTemplate.triggerTransition(mesh, {
+    target: 1.0,
+  });
   return mesh;
 }
 

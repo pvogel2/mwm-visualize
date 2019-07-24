@@ -8,11 +8,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   window.ipcc = new IPCC(document.querySelector('#ipcc-ctrl-card'));
 
-  window.wbCtrl = new WBCtrl(document.querySelector('#wb-country-card'), document.querySelector('#wb-global-card'));
+  window.wbCtrl = new WBCtrl(document.querySelector('#wb-card'));
 
 
   var fabMenuEl = document.querySelector('#fab_menu');
   var fabMenu = new mdc.menu.MDCMenu(fabMenuEl);
+  var fabMenuBtn = document.querySelector('#main_menu_btn');
 
   var neCtrlCardEl = document.querySelector('#ne-ctrl-card');
   var indCtrlCardEl = document.querySelector('#ind-ctrl-card');
@@ -20,14 +21,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
   var textinput = indCtrlCardEl.querySelector('#indicator-text-field');
   var icon = indCtrlCardEl.querySelector('.mdc-text-field__icon');
 
-  /*icon.addEventListener('click', function(evt) {
-    console.log(textinput.value);
-    window._indicators_.push(textinput.value);
-  });*/
-
-  window.toggleFabMenu = function(evt) {
-    fabMenu.open = !fabMenu.open;
-  };
+  fabMenuBtn.addEventListener('mouseenter', evt => {
+    fabMenu.open = true;
+  });
 
   fabMenuEl.addEventListener('MDCMenu:selected', function(evt) {
      var detail = evt.detail;

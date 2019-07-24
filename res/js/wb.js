@@ -37,21 +37,26 @@ var wb = {
 */
 
 class WBCtrl {
-  constructor(countryElement, globalElement) {
-    this.countryElement_ = countryElement;
-    this.globalElement_ = globalElement;
+  constructor(element) {
+    this.element_ = element;
     this.countryFilter_ = null;
     this.country = null;
 
-    const filterIcon = this.countryElement_.querySelector('.mdc-text-field__icon');
+    const filterIcon = this.element_.querySelector('.mdc-text-field__icon');
     filterIcon.addEventListener('click', this);
 
-    this.yearSlider = new mdc.slider.MDCSlider(this.globalElement_.querySelector('.mdc-slider'));
+    this.yearSlider = new mdc.slider.MDCSlider(this.element_.querySelector('.mdc-slider'));
 
     this.yearSlider.listen('MDCSlider:change', (event) => {
+      if (!this.sliderDoubleEventToggle) {
       console.log(`Value changed to ${event.detail.value}`);
       this.updateControls();
       this.updateGraphs();
+      window.updatePopulation();
+      window.updateRefugees();
+      window.updateRefugeesOrigin();
+      }
+      this.sliderDoubleEventToggle = !this.sliderDoubleEventToggle;
     });
 
     this.renderer = null;
@@ -68,8 +73,8 @@ class WBCtrl {
       return;
     }
     this.country = new WBCountry(countryData);
-    this.countryElement_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
-    this.countryElement_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
+    this.element_.querySelector('.wb_income').textContent = `${this.country.incomeValue()} (${this.country.incomeId()})`;
+    this.element_.querySelector('.wb-country-filter input').value = `${this.country.name()} (${this.country.iso2()})`;
     this.applyFilter();
   }
 
@@ -78,14 +83,11 @@ class WBCtrl {
   }
 
   hide() {
-    this.countryElement_.style.display = 'none';
-    this.globalElement_.style.display = 'none';
+    this.element_.style.display = 'none';
   }
 
   show() {
-    this.countryElement_.style.display = 'block';
-    this.globalElement_.style.display = 'block';
-    this.yearSlider.layout();
+    this.element_.style.display = 'block';
     if (!this.renderer) {
       this.renderer = new MWM.Renderer({
         cameraType: 'orhtogonal',
@@ -93,11 +95,25 @@ class WBCtrl {
         width: 400,
         height: 200,
       });
+      this.yearSlider.layout();
+
+      this.renderer.registerEventCallback("click", this.renderCallback.bind(this));
     }
+  }
+
+  
+  renderCallback(event, intersections) {
+    console.log('rendered');
   }
 
   createLines() {
     const indicators = this.getIndicators();
+    const indicatorColors = { 
+      'SP_POP_TOTL': new THREE.Color(0x0000ff),
+      'SM_POP_REFG': new THREE.Color(0xff0000),
+      'SM_POP_REFG_OR': new THREE.Color(0x00ff00),
+    }
+
     const lines = [];
     indicators.forEach(indicator => {
       const data = this.country.data.indicators[indicator.replace(/\./g, '_')];
@@ -106,20 +122,27 @@ class WBCtrl {
       const positions = new Float32Array( length * 3 );
       const colors = new Float32Array( length * 3 );
   
-      const defaultColor = new THREE.Color(0x00ff00);
-      const currentColor = new THREE.Color(0xff0000);
+      const currentColor = new THREE.Color(0xffffff);
+      const defaultColor = indicatorColors[indicator.replace(/\./g, '_')];
   
       const oldest = Number(data[data.length - 1].date);
       const latest = Number(data[0].date);
-      const max = 318622525;
+      let minValue = 0;
+      let maxValue = 0;// 318622525;
   
       const indices = [];
 
       for (let i = 0; i < length; i++) {
+        const date = data[i];
+        minValue = Math.min(minValue, date.value);
+        maxValue = Math.max(maxValue, date.value);
+      }
+
+      for (let i = 0; i < length; i++) {
           const date = data[i];
           const x = 200 - i * 400 / length;
-          const y = (date.value ? date.value / max * 195 : 0) - 100;
-          console.log(Number(date.date), date.value, '->', x, y);
+          const y = (date.value ? date.value / maxValue * 195 : 0) - 100;
+          // console.log(Number(date.date), date.value, '->', x, y);
           const v0 = new THREE.Vector3(x, y, 0);
          
           v0.toArray(positions, i * 3);
@@ -141,10 +164,15 @@ class WBCtrl {
       });
       const line = new THREE.Line( geometry, material );
       line.userData.indices = indices;
-      lines.push(line);
+      line.userData.minYear = oldest;
+      line.userData.maxYear = latest;
+      line.userData.minValue = minValue;
+      line.userData.maxValue = maxValue;
+     lines.push(line);
     });
     return lines;
   }
+
   async applyFilter() {
     const indicators = this.getIndicators();
 
@@ -157,19 +185,29 @@ class WBCtrl {
   }
 
   updateControls() {
+    this.element_.querySelector('.mwm-md-time-slider__current').innerText = this.getYear();
+    if (!this.country) return;
+
     const indicators = this.getIndicators();
     indicators.forEach(indicator => {
       const selector = `.wb_${indicator.toLowerCase().replace(/\./g, '_')}`;
-      this.countryElement_.querySelector(selector).textContent = this.country.findIndicatorValue(indicator, this.getYear());
+      this.element_.querySelector(selector).textContent = this.country.findIndicatorValue(indicator, this.getYear());
     });
   }
 
   updateGraphs() {
+    if (!this.country || !this.renderer) return;
+
     const indicators = this.getIndicators();
-    const defaultColor = new THREE.Color(0x00ffff);
-    const currentColor = new THREE.Color(0xff0000);
+    const indicatorColors = { 
+      'SP_POP_TOTL': new THREE.Color(0x0000ff),
+      'SM_POP_REFG': new THREE.Color(0xff0000),
+      'SM_POP_REFG_OR': new THREE.Color(0x00ff00),
+    }
 
     indicators.forEach((indicator, i) => {
+      const defaultColor = indicatorColors[indicator.replace(/\./g, '_')];
+      const currentColor = new THREE.Color(0xffffff);
       const item = this.renderer.getObject(`wbLine${i}`);
       const line = item.obj;
       const colors = line.geometry.attributes.color.array;
@@ -205,7 +243,7 @@ class WBCtrl {
 
   handleEvent(event) {
     if (event.type === 'click') {
-      this.countryFilter_ = this.countryElement_.querySelector('.wb-country-filter input').value;
+      this.countryFilter_ = this.element_.querySelector('.wb-country-filter input').value;
       this.applyFilter();
     }
   }

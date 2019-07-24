@@ -3,11 +3,15 @@ varying vec2 vShift;
 varying vec4 vColor;
 uniform float time;
 
-float period = time *3.14 * 0.25;
 float limit = 0.02;
-float scale = 15. + 3. * sin(period);
+
+float period;
+float scale;
 
 void main() {
+  period = time *3.14 * 0.25;
+  scale = 15. + 3. * sin(period);
+
   // calculate value for upper boundary
   vec2 va = smoothstep(vShift - scale * limit, vShift - limit, vUV);
   // add value for lower boundary

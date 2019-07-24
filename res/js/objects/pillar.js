@@ -4,6 +4,14 @@ class PillarTemplate {
     this._createGeometry();
   }
 
+  static triggerTransition(mesh, config) {
+    mesh.userData.transition_duration = config.duration || 0.5;
+    mesh.userData.transition_start = 0.0;
+    mesh.userData.transition_running = true;
+    mesh.userData.transition_from = mesh.material.uniforms.weight.value;
+    mesh.userData.transition_to = config.target;
+  }
+
   get geometry() {
     return this._geometry;
   }
@@ -99,7 +107,7 @@ class PillarTemplate {
 
     const uniforms = {
         time:{type: "f", value: 0.0},
-        scale:{type: "f", value: 0.0}
+        weight:{type: "f", value: 0.0}
       };
 
       var material = new THREE.ShaderMaterial( {
@@ -111,24 +119,27 @@ class PillarTemplate {
       });
       material.side = THREE.DoubleSide;
 
-      var pScaler = {
-          totalTime: 0.5,
-          startTime: 0.0,
-          currentValue: 0.0,
-          up: renderer => {
-            renderer.registerEventCallback('render', (data) => {
-              if (pScaler.startTime === 0.0) {
-                pScaler.startTime = data.elapsedTime;
-              }
-              if (pScaler.currentValue < 1.0) {
-                pScaler.currentValue = Math.min((data.elapsedTime - pScaler.startTime) / pScaler.totalTime, 1.0);
-                material.uniforms.scale.value = pScaler.currentValue;
-              }
-            });
-          }
-      };
+      const mesh = new THREE.Mesh( this._geometry, material );
+      mesh.userData.transition_duration = 0.5; 
+      mesh.userData.transition_start = 0.0; 
+      mesh.userData.transition_running = false;
+      mesh.userData.transition_from = 0.0;
+      mesh.userData.transition_to = 1.0;
 
-      pScaler.up(renderer)
-      return new THREE.Mesh( this._geometry, material );
+      renderer.registerEventCallback('render', (data) => {
+        if (mesh.userData.transition_running === true) {
+          if (mesh.userData.transition_start === 0.0) {
+            mesh.userData.transition_start = data.elapsedTime;
+          }
+          const delta = Math.min((data.elapsedTime - mesh.userData.transition_start) / mesh.userData.transition_duration, 1.0);
+          material.uniforms.weight.value = (1.0 - delta) * mesh.userData.transition_from + delta * mesh.userData.transition_to;
+          if (delta >= 1.0) {
+            mesh.userData.transition_running = false;
+            mesh.userData.transition_start = 0.0;
+          }
+        }
+      });
+
+      return mesh;
   }
 }
