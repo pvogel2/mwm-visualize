@@ -11,13 +11,16 @@
     <script src="/res/js/mwm/bundle.js"></script>
     <!-- script src="/res/js/assets/renderer.js"></script-->
     <script src="/res/js/assets/wb.js"></script>
+    <script src="/res/js/assets/ne.js"></script>
+    <script src="/res/js/assets/transition.js"></script>
     <script src="/res/js/assets/ipcc.js"></script>
     <script src="/res/js/assets/ctrl.js"></script>
     <script src="/res/js/assets/objects/city.js"></script>
     <script src="/res/js/assets/objects/pillar.js"></script>
+    <script src="/res/js/assets/objects/globe.js"></script>
     <script src="/res/js/assets/world.js"></script>
   </head>
-  <body style="margin:0px">
+  <body style="margin:0px" oncontextmenu="return false;">
     <script id="vertexshader" type="x-shader/x-vertex">
       attribute float size;
       attribute vec3 color;
@@ -243,44 +246,44 @@
     <div class="demo-card__title mdc-typography--headline6">natural earth</div>
        <ul class="mdc-list" aria-orientation="vertical">
 	      <li class="mdc-list-item">
-	        <div class="mdc-switch" onchange="ne.toggleCities(this)" data-mdc-auto-init="MDCSwitch">
+	        <div class="mdc-switch" id="ne-cities-switch">
 	           <div class="mdc-switch__track"></div>
 	           <div class="mdc-switch__thumb-underlay">
 	             <div class="mdc-switch__thumb">
-	                 <input type="checkbox" id="ne-cities-switch" class="mdc-switch__native-control" role="switch">
+	                 <input type="checkbox" class="mdc-switch__native-control" role="switch">
 	             </div>
 	           </div>
 	         </div>
 	         <label for="ne-cities-switch">show cities</label>
 				<li>
 	      <li class="mdc-list-item">
-		      <div class="mdc-switch" onchange="ne.toggleRivers(this)" data-mdc-auto-init="MDCSwitch">
+		      <div class="mdc-switch" id="ne-rivers-switch">
 		        <div class="mdc-switch__track"></div>
 		        <div class="mdc-switch__thumb-underlay">
 		          <div class="mdc-switch__thumb">
-		              <input type="checkbox" id="ne-rivers-switch" class="mdc-switch__native-control" role="switch">
+		              <input type="checkbox" class="mdc-switch__native-control" role="switch">
 		          </div>
 		        </div>
 		      </div>
 		      <label for="ne-rivers-switch">show rivers</label>
 	      <li>
 	      <li class="mdc-list-item">
-		      <div class="mdc-switch" onchange="ne.toggleLakes(this)" data-mdc-auto-init="MDCSwitch">
+		      <div class="mdc-switch" id="ne-lakes-switch">
 		        <div class="mdc-switch__track"></div>
 		        <div class="mdc-switch__thumb-underlay">
 		          <div class="mdc-switch__thumb">
-		              <input type="checkbox" id="ne-lakes-switch" class="mdc-switch__native-control" role="switch">
+		              <input type="checkbox" class="mdc-switch__native-control" role="switch">
 		          </div>
 		        </div>
 		      </div>
 		      <label for="ne-lakes-switch">show lakes</label>
 	      <li>
 	      <li class="mdc-list-item">
-		      <div class="mdc-switch" onchange="ne.toggleGeolines(this)" data-mdc-auto-init="MDCSwitch">
+		      <div class="mdc-switch" id="ne-geolines-switch">
 		        <div class="mdc-switch__track"></div>
 		        <div class="mdc-switch__thumb-underlay">
 		          <div class="mdc-switch__thumb">
-		              <input type="checkbox" id="ne-geolines-switch" class="mdc-switch__native-control" role="switch">
+		              <input type="checkbox" class="mdc-switch__native-control" role="switch">
 		          </div>
 		        </div>
 		      </div>
@@ -332,6 +335,6 @@
 		  </ul>
      </div>
   </div>
-  <div id="wb-three-country-label" style="display:none;position:absolute;background:white;padding:5px;"></div>
+  <div id="wb-three-country-label"></div>
   </body>
 </html>

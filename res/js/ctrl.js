@@ -80,34 +80,3 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
   }
 });
-
-var ne = {
-  toggleCities: elem => {
-    if(elem.MDCSwitch.checked) {
-      loadCities(getWorldSphere(), 0x00ff33);
-    } else {
-      removeCities();
-    }
-  },
-  toggleRivers: elem => {
-    if(elem.MDCSwitch.checked) {
-      loadFeature(getWorldSphere(), 0x0044ff, 'rivers','three');
-    } else {
-      removeFeature('rivers');
-    }
-  },
-  toggleLakes: elem => {
-    if(elem.MDCSwitch.checked) {
-      loadFeature(getWorldSphere(), 0x0000aa, 'lakes','three');
-    } else {
-      removeFeature('lakes');
-    }
-  },
-  toggleGeolines: elem => {
-    if(elem.MDCSwitch.checked) {
-      loadFeature(getWorldSphere(), 0x999999, 'geolines','three');
-    } else {
-      removeFeature('geolines');
-    }
-  }
-};

@@ -12,3 +12,22 @@
 .mwm-md-time-slider__max-label {
   margin: 0px 10px;
 }
+
+#wb-three-country-label {
+  /*display: none;*/
+  position: absolute;
+  background: white;
+  padding: 4px 8px;
+  font-family: Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  color: #333333;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+#wb-three-country-label.active {
+  display: block;
+  opacity: 1;
+  transition: opacity 0.25s;
+}

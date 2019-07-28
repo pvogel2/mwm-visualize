@@ -1,15 +1,12 @@
 class PillarTemplate {
-  constructor(config) {
+  constructor(config = {}) {
     this.color = config.color ? config.color : 0xffffff;
     this._createGeometry();
   }
 
   static triggerTransition(mesh, config) {
-    mesh.userData.transition_duration = config.duration || 0.5;
-    mesh.userData.transition_start = 0.0;
-    mesh.userData.transition_running = true;
-    mesh.userData.transition_from = mesh.material.uniforms.weight.value;
-    mesh.userData.transition_to = config.target;
+    mesh.userData.transition.from = mesh.material.uniforms.weight.value;
+    mesh.userData.transition.to = config.target;
   }
 
   get geometry() {
@@ -119,26 +116,18 @@ class PillarTemplate {
       });
       material.side = THREE.DoubleSide;
 
-      const mesh = new THREE.Mesh( this._geometry, material );
-      mesh.userData.transition_duration = 0.5; 
-      mesh.userData.transition_start = 0.0; 
-      mesh.userData.transition_running = false;
-      mesh.userData.transition_from = 0.0;
-      mesh.userData.transition_to = 1.0;
-
-      renderer.registerEventCallback('render', (data) => {
-        if (mesh.userData.transition_running === true) {
-          if (mesh.userData.transition_start === 0.0) {
-            mesh.userData.transition_start = data.elapsedTime;
-          }
-          const delta = Math.min((data.elapsedTime - mesh.userData.transition_start) / mesh.userData.transition_duration, 1.0);
-          material.uniforms.weight.value = (1.0 - delta) * mesh.userData.transition_from + delta * mesh.userData.transition_to;
-          if (delta >= 1.0) {
-            mesh.userData.transition_running = false;
-            mesh.userData.transition_start = 0.0;
-          }
+      const transition = new Transition({
+        duration: 0.25,
+        callback: current => {
+          material.uniforms.weight.value = current;
         }
       });
+
+      const mesh = new THREE.Mesh( this._geometry, material );
+
+      mesh.userData.transition = transition;
+
+      renderer.registerEventCallback('render', transition.update.bind(transition));
 
       return mesh;
   }

@@ -2,8 +2,8 @@ class Renderer {
   constructor() {
     this.stats = window.Stats ? new Stats() : null;
     this.running = false;
-	this.paused = false;
-	this.three = {
+	  this.paused = false;
+	  this.three = {
 		szene : null,
 		renderer : null,
 		camera : null,

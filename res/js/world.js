@@ -1,14 +1,136 @@
-let renderer;
+class WorldApp {
+  constructor() {
+    this.renderer = new MWM.Renderer({
+      fov: 45,
+      cameraNear: 0.01,
+      cameraFar: 500,
+      position: {x: 0, y: 15, z: 70},
+      target: {x: 0, y: 0, z: 0},
+    });
 
-function loadCities(parent, color) {
-  loadFeature(getWorldSphere(), 0xffffff, 'populatedplaces','dbase');
-};
+    this.renderer.res = '/res/obj/';
 
-function removeCities() {
-  renderer.removeObject('citypoints');
-  renderer.removeObject('citylines');
-  renderer.removeObject('sizedCities');
-};
+    this.controls = {
+      menu: document.querySelector('#fab_menu'),
+      countrylabel: document.querySelector("#wb-three-country-label")
+    }
+
+    this.interactions = {
+      px: null,
+      py: null,
+      dx: 0,
+      dy: 0,
+    }
+
+    this.objects = {
+      world: getWorldSphere(),
+      sunlight: (new THREE.DirectionalLight( 0xffffff, 0.5 ))
+    }
+
+    this.renderer.addObject('world', this.objects.world);
+    this.renderer.addObject('sunlight', this.objects.sunlight);
+
+    this.transitions = {
+      cameraSlide: new Transition({
+        duration: 0.4,
+        callback: current => {
+          this.renderer.three.camera.position.set(current, 15, 70);
+          this.renderer.three.camera.lookAt(current, 0, 0);
+        }
+      })
+    }
+
+    this.renderer.registerEventCallback('render', this);
+
+    this.controls.menu.addEventListener('MDCMenu:selected', this);
+    document.addEventListener('NE:featureLoaded', this);
+    document.addEventListener('NE:unloadFeature', this);
+  }
+
+  handleEvent(event) {
+    switch(event.type) {
+      case 'MDCMenu:selected':
+        this.transitions.cameraSlide.from = this.renderer.three.camera.position.x;
+    
+        switch (event.detail.index) {
+          case 0:
+            this.objects.world.userData.rotate = !this.objects.world.userData.rotate;
+            break;
+          case 1: 
+          case 3: 
+            this.transitions.cameraSlide.to = 0;
+            break;
+          case 2: 
+          case 4: 
+            this.transitions.cameraSlide.to = -10;
+            break;
+          default:;
+        }
+        break;
+      case 'render':
+        this.transitions.cameraSlide.update(event);
+        break;
+      case 'NE:featureLoaded':
+        const json = event.detail.json;
+        const id = event.detail.id;
+        const color = event.detail.color;
+        if (id === 'populatedplaces') {
+          createCityInstances(json, color).then(mesh => {
+            this.renderer.addObject('sizedCities', mesh, false, this.objects.world);
+          });
+        } else {
+          const obj = createNEFeature(json, color);
+          this.renderer.addObject( id, obj , false, this.objects.world);
+        }
+        break;
+      case 'NE:unloadFeature':
+        this.unloadNEFeature(event.detail);
+        break;
+      case 'move':
+        this.onMouseMove(event);
+        break;
+      default:;
+    }
+  }
+
+  unloadNEFeature(id) {
+    if (id === 'populatedplaces') {
+      this.renderer.removeObject('sizedCities');
+    } else {
+      this.renderer.removeObject(id);
+    }
+  }
+
+  onMouseMove(event) {
+    if (event.buttons === 1 || event.buttons === 3) { // left mouse button
+
+      if (this.interactions.px != null) {
+        this.interactions.dx = this.interactions.px - event.screenX;
+      }
+      this.interactions.px = event.screenX;
+      this.objects.world.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -1 * this.interactions.dx * 0.005);
+
+      if (this.interactions.py != null) {
+        this.interactions.dy = this.interactions.py - event.screenY;
+      }
+      this.interactions.py = event.screenY;
+      this.objects.world.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), -1 * this.interactions.dy * 0.005);
+    }
+
+    if (event.buttons === 2 || event.buttons === 3) {
+      this.controls.countrylabel.classList.remove('active')
+
+      if (this.interactions.py != null) {
+        this.interactions.dy = this.interactions.py - event.screenY;
+      }
+      this.interactions.py = event.screenY;
+      this.objects.world.position.z += this.interactions.dy * 0.05;
+    }
+
+    if (event.buttons) return;
+    
+  }
+}
 
 function loadCountries(parent, color) {
   fetch('/data/countries').then(
@@ -20,7 +142,7 @@ function loadCountries(parent, color) {
           return item.latitude !== "" && item.longitude !== "";
         });
         createCapitalInstances(captials, color).then(mesh => {
-          renderer.addObject('capitalCities', mesh, false, parent);
+          worldApp.renderer.addObject('capitalCities', mesh, false, parent);
         });
       }).catch(function(err) {
         console.log('err', err);
@@ -100,7 +222,7 @@ function loadIndicator(parent, color, id, config) {
     response => response.json()
   ).then(json => {
     createIndicatorInstances(json, color, config.scale, '' + wbCtrl.getYear(), id, {lat: config.lat, long: config.long}).then(mesh => {
-      renderer.addObject(objId, mesh, false, parent);
+      worldApp.renderer.addObject(objId, mesh, false, parent);
     });
   }).catch(function(err) {
     console.log('err', err);
@@ -119,7 +241,7 @@ function updateIndicator(id, config) {
 
 function updateIndicatorInstances(data, scale, year, id) {
   const objId = `${id.replace(/\./g, '_')}Blocks`;
-  const renderObj = renderer.getObject(objId);
+  const renderObj = worldApp.renderer.getObject(objId);
   if (!renderObj) return;
 
   const mesh = renderObj.obj;
@@ -141,36 +263,13 @@ function updateIndicatorInstances(data, scale, year, id) {
   }
   mesh.geometry.attributes.value.needsUpdate = true;
   PillarTemplate.triggerTransition(mesh, {
-    duration: 0.25,
     target: (mesh.material.uniforms.weight.value >= 1.0 ? 0.0 : 1.0),
   });
 }
 
 function unloadIndicator(id) {
-  renderer.removeObject(`${id.replace(/\./g, '_')}Blocks`);
+  worldApp.renderer.removeObject(`${id.replace(/\./g, '_')}Blocks`);
 }
-
-function loadFeature(parent, color, id, type) {
-  if (worldWorker) {
-    worldWorker.postMessage({id:id, type: type, color: color});
-  } else {
-    fetch(`/data/openworld/${id}/${type}`).then(
-      response => response.json()
-    ).then(json => {
-      console.log("LOADED JSON FOR FEATURE");
-      var obj = createFeature(json, color);
-      renderer.addObject( id, obj , false, parent);
-      console.log("create line complete end");
-  
-    }).catch(function(err) {
-      console.log('err', err);
-    });
-  }
-};
-
-function removeFeature(id) {
-  renderer.removeObject( id);
-};
 
 async function createIndicatorInstances(data, color, scale, year, id, offset) {
   var offsets = [];
@@ -204,7 +303,7 @@ async function createIndicatorInstances(data, color, scale, year, id, offset) {
   pillar.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( orientations ), 4 ) );
   pillar.geometry.addAttribute( 'value', new THREE.InstancedBufferAttribute( new Float32Array( values ), 2 ) );
 
-  const mesh = await pillar.getMesh(renderer);
+  const mesh = await pillar.getMesh(worldApp.renderer);
   PillarTemplate.triggerTransition(mesh, {
     target: 1.0,
   });
@@ -258,7 +357,7 @@ async function createCityInstances(data, color) {
   city.geometry.addAttribute( 'offset', new THREE.InstancedBufferAttribute( new Float32Array( offsets ), 3 ) );
   city.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( orientations ), 4 ) );
 
-  const cMesh = await city.getMesh(renderer);
+  const cMesh = await city.getMesh(worldApp.renderer);
   return cMesh;
 }
 
@@ -291,13 +390,13 @@ async function createCapitalInstances(data, color) {
   city.geometry.addAttribute( 'offset', new THREE.InstancedBufferAttribute( new Float32Array( offsets ), 3 ) );
   city.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( orientations ), 4 ) );
 
-  const cMesh = await city.getMesh(renderer);
+  const cMesh = await city.getMesh(worldApp.renderer);
   return cMesh;
 }
 
 function createCentroids(data, parent, color) {
   const p_uniforms = {
-      texture:   { type: "t", value: renderer.getTexture( "disc.png" ) },
+      texture:   { type: "t", value: worldApp.renderer.getTexture( "disc.png" ) },
   };
   p_uniforms.texture.value.wrapS = p_uniforms.texture.value.wrapT = THREE.RepeatWrapping;
 
@@ -333,12 +432,12 @@ function createCentroids(data, parent, color) {
   //var s_material = new THREE.PointsMaterial( { size: 0.05, vertexColors: THREE.VertexColors } );
   var centroids = new THREE.Points( p_geometry, p_material );
   //var lines = new THREE.LineSegments( s_geometry, s_material );
-  //renderer.addObject( 'citypoints', points, false );
+  //worldApp.renderer.addObject( 'citypoints', points, false );
   //parent.add(centroids);
-  renderer.addObject( 'centroids', centroids , true, parent);
+  worldApp.renderer.addObject( 'centroids', centroids , true, parent);
 }
 
-function createFeature(data, color) {
+function createNEFeature(data, color) {
   var length = data.length;
   var s_geometry = new THREE.BufferGeometry();
   var s_positions = new Float32Array( length * 3 );
@@ -458,7 +557,7 @@ function createTemperatureInstance(data) {
 
   const points = new THREE.Points( geometry, material);
   const parent = getWorldSphere();
-  //renderer.addObject( 'ipccTemp01', points , false, parent);
+  //worldApp.renderer.addObject( 'ipccTemp01', points , false, parent);
 
   const texture = new THREE.DataTexture( tmp_data, grid.longitude.length, grid.latitude.length, THREE.RGBFormat, THREE.UnsignedByteTyp, THREE.UVMapping);
   texture.needsUpdate = true;
@@ -473,7 +572,7 @@ function createTemperatureInstance(data) {
 };
 
 function removeTemperatureInstance() {
-  renderer.removeObject('ipccTemp01');
+  worldApp.renderer.removeObject('ipccTemp01');
 };
 
 function calcSphericalFromLatLongRad(lat, long, r) {
@@ -495,77 +594,23 @@ function pushOrientationFromSpherical(s, target) {
 
 function getWorldSphere() {
   if (!window._worldSphere) {
-    const geometry = new THREE.SphereGeometry( 20, 64, 64 );
-    //  var obj = new THREE.Mesh( object, new THREE.MeshPhongMaterial( {glowMap : emap,reflectivity :0.5, map : dmap, specularMap :smap, bumpMap :bmap , bumpScale : 0.005} ));
-    //const material = new THREE.MeshPhongMaterial( {map: earthTexture, bumpMap : earthTexture, bumpScale :0.2} );
-    var color = new THREE.Color( 0x010101);
-    const material = new THREE.MeshPhongMaterial( {color: color} );
-    window._worldSphere = new THREE.Mesh( geometry, material );
+    const globe = new GlobeTemplate();
+    window._worldSphere = globe.getMesh();
   }
   return window._worldSphere;
 };
 
 document.addEventListener("DOMContentLoaded", function(event) {
-  const animations = [];
-  renderer = new MWM.Renderer({});
-  renderer.res = '/res/obj/';
+  window.worldApp = new WorldApp();
 
-  const worldSphere = getWorldSphere();
+  window.neCtrl = new NECtrl(document.querySelector('#ne-ctrl-card'));
 
-  window.runAnimation = true;
-  worldSphere.onAfterRender = function(){
-    worldSphere.rotateY(0.002);
-  };
+  loadCountries(getWorldSphere(), 0xffffff);
 
-  var fabMenuEl = document.querySelector('#fab_menu');
-  fabMenuEl.addEventListener('MDCMenu:selected', function(evt) {
-     var detail = evt.detail;
-     if (detail.index === 0) {
-       window.runAnimation = !window.runAnimation;
-       if (window.runAnimation) {
-          worldSphere.onAfterRender = function(){
-            worldSphere.rotateY(0.002);
-          };
-       } else {
-          worldSphere.onAfterRender = function(){};
-       }
-     }
-  });
+  neCtrl.loadFeature('coastline');
+  neCtrl.loadFeature('boundariesland');
 
-  renderer.addObject('world', worldSphere);
-
-  // White directional light at half intensity shining from the top.
-  const sunLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-  renderer.addObject( 'sunLight', sunLight );
-
-  //document.querySelector('.mwm-loading').style.display = 'none';
-
-
-  if (window.Worker) {
-    worldWorker = new Worker('/res/js/assets/worldworker.js');
-
-    worldWorker.addEventListener('message', msg => {
-      const json = msg.data.json;
-      const id = msg.data.id;
-      const color = msg.data.color;
-      const parent = getWorldSphere();
-      if (id === 'populatedplaces') {
-        createCityInstances(json, color).then(mesh => {
-          renderer.addObject('sizedCities', mesh, false, parent);
-        });
-      } else {
-        const obj = createFeature(json, color);
-        renderer.addObject( id, obj , false, parent);
-      }
-    });
-
-    loadCountries(getWorldSphere(), 0xffffff);
-  }
-
-  loadFeature(getWorldSphere(), 0xffffff, 'coastline','three');
-  loadFeature(getWorldSphere(), 0x666666, 'boundariesland','three');
-
-  renderer.registerEventCallback("click", (event, intersections) => {
+  worldApp.renderer.registerEventCallback("click", (event, intersections) => {
     var intersected;
     if (intersections && intersections.length) {
       intersections.forEach(item => {
@@ -582,11 +627,43 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
   });
 
-  renderer.registerEventCallback("move", (event, intersections) => {
-    // var offset = renderer.three.renderer.domElement.offset();
+  worldApp.renderer.registerEventCallback("move", (event, intersections) => {
+    if (event.buttons === 1 || event.buttons === 3) { // left mouse button
+      const w = getWorldSphere();
+
+      if (typeof window._movedX != "undefined") {
+        window._deltaX = window._movedX - event.screenX;
+      }
+      window._movedX = event.screenX;
+      w.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -1 * window._deltaX * 0.005);
+
+      if (typeof window._movedY != "undefined") {
+        window._deltaY = window._movedY - event.screenY;
+      }
+      window._movedY = event.screenY;
+      w.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), -1 * window._deltaY * 0.005);
+    }
+
+    if (event.buttons === 2 || event.buttons === 3) {
+      document.querySelector("#wb-three-country-label").classList.remove('active')
+      const w = getWorldSphere();
+      if (typeof window._movedY != "undefined") {
+        window._deltaY = window._movedY - event.screenY;
+      }
+      window._movedY = event.screenY;
+      w.position.z += window._deltaY * 0.05;
+    }
+
+    if (event.buttons) return;
+
+    delete window._movedX;
+    window._deltaX = 0;
+    delete window._movedY;
+    window._deltaY = 0;
+    // var offset = worldApp.renderer.three.renderer.domElement.offset();
     // console.log('intersections', intersections);
-    const widthHalf = 0.5 * renderer.three.renderer.context.canvas.width;
-    const heightHalf = 0.5 * renderer.three.renderer.context.canvas.height;
+    const widthHalf = 0.5 * worldApp.renderer.three.renderer.context.canvas.width;
+    const heightHalf = 0.5 * worldApp.renderer.three.renderer.context.canvas.height;
     
     let intersected;
     const div = document.querySelector("#wb-three-country-label");
@@ -602,36 +679,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if (intersected && intersected.index != null) {
       const vector = intersected.point;
       const country = wb.getCountry(intersected.index);
-      const frustum = new THREE.Frustum();
 
-      frustum.setFromMatrix(
-        new THREE.Matrix4().multiplyMatrices(
-          renderer.three.camera.projectionMatrix,
-          renderer.three.camera.matrixWorldInverse
-        )
-      );
+      vector.project(worldApp.renderer.three.camera);
 
+      vector.x = ( vector.x * widthHalf ) + widthHalf + 20;
+      vector.y = - ( vector.y * heightHalf ) + heightHalf + 5;
 
-
-      if(frustum.containsPoint( vector )){
-        vector.project(renderer.three.camera);
-
-        vector.x = ( vector.x * widthHalf ) + widthHalf + 20;
-        vector.y = - ( vector.y * heightHalf ) + heightHalf + 5;
-
-        div.innerText = `${country.name()} (${country.iso2()})`; 
-        div.style.top = `${vector.y}px`;
-        div.style.left = `${vector.x}px`;
-        div.style.display = 'block';
-      } else {
-        div.style.display = 'none';
-        div.innerText = '';
-      }
+      div.innerText = `${country.name()} (${country.iso2()})`; 
+      div.style.top = `${vector.y}px`;
+      div.style.left = `${vector.x}px`;
+      div.classList.add('active');
     } else {
-      div.style.display = 'none';
+      div.classList.remove('active');
       div.innerText = '';
     }
   });
 
-  renderer.start();
+  worldApp.renderer.start();
 });
