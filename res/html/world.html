@@ -10,14 +10,15 @@
     <script src="/res/js/three/examples/js/libs/stats.min.js"></script>
     <script src="/res/js/mwm/bundle.js"></script>
     <!-- script src="/res/js/assets/renderer.js"></script-->
+    <script src="/res/js/assets/objects/worldThreeObject.js"></script>
+    <script src="/res/js/assets/objects/city.js"></script>
+    <script src="/res/js/assets/objects/pillar.js"></script>
+    <script src="/res/js/assets/objects/globe.js"></script>
     <script src="/res/js/assets/wb.js"></script>
     <script src="/res/js/assets/ne.js"></script>
     <script src="/res/js/assets/transition.js"></script>
     <script src="/res/js/assets/ipcc.js"></script>
     <script src="/res/js/assets/ctrl.js"></script>
-    <script src="/res/js/assets/objects/city.js"></script>
-    <script src="/res/js/assets/objects/pillar.js"></script>
-    <script src="/res/js/assets/objects/globe.js"></script>
     <script src="/res/js/assets/world.js"></script>
   </head>
   <body style="margin:0px" oncontextmenu="return false;">
@@ -106,7 +107,7 @@
   <div id="threejs-container" style="overflow:hidden;position:absolute;top:0px;bottom:0px;left:0px;right:0px">
   </div>
 
-  <div style="position:absolute;left:20px;bottom:20px;padding:20px;display:none;"  class="mdc-card" id="ipcc-ctrl-card">
+  <div style="position:absolute;left:20px;bottom:20px;padding:20px;top:20px;display:none;"  class="mdc-card" id="ipcc-ctrl-card">
     <div class="demo-card__title mdc-typography--headline6 wb_title"><span class="ipcc_glob_title"></span></div>
     <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle"><span class="ipcc_glob_institution"></span></div>
     <div class="demo-card__content">
@@ -141,7 +142,7 @@
     </div>
   </div>
 
-  <div style="position:absolute;left:20px;bottom:20px;padding:20px;display:none;"  class="mdc-card" id="wb-card">
+  <div style="position:absolute;left:20px;bottom:20px;padding:20px;top:20px;display:none;"  class="mdc-card" id="wb-card">
     <div class="demo-card__title mdc-typography--headline6">wb indicator data</div>
     <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle">global overview (<span class="mwm-md-time-slider__current">2014</span>)</div>
     <div class="mwm-md-time-slider--with-labels">
@@ -165,37 +166,37 @@
     </div>
     <ul class="mdc-list" aria-orientation="vertical">
       <li class="mdc-list-item">
-        <div class="mdc-switch" onchange="togglePopulation(this)" data-mdc-auto-init="MDCSwitch">
+        <div class="mdc-switch" id="wb-pop-switch">
            <div class="mdc-switch__track"></div>
            <div class="mdc-switch__thumb-underlay">
              <div class="mdc-switch__thumb">
-               <input type="checkbox" id="wb-pop-switch" class="mdc-switch__native-control" role="switch">
+               <input type="checkbox" class="mdc-switch__native-control" role="switch">
              </div>
            </div>
          </div>
          <label for="wb-pop-switch">show population</label>
       </li>
       <li class="mdc-list-item">
-        <div class="mdc-switch" onchange="toggleRefugees(this)" data-mdc-auto-init="MDCSwitch">
+        <div class="mdc-switch" id="wb-ref-switch">
           <div class="mdc-switch__track"></div>
           <div class="mdc-switch__thumb-underlay">
             <div class="mdc-switch__thumb">
-              <input type="checkbox" id="wb-refu-switch" class="mdc-switch__native-control" role="switch">
+              <input type="checkbox" class="mdc-switch__native-control" role="switch">
             </div>
           </div>
         </div>
-        <label for="wb-refu-switch">show refugees</label>
+        <label for="wb-ref-switch">show refugees</label>
       </li>
       <li class="mdc-list-item">
-        <div class="mdc-switch" onchange="toggleRefugeesOrigin(this)" data-mdc-auto-init="MDCSwitch">
+        <div class="mdc-switch" id="wb-ref-origin-switch">
           <div class="mdc-switch__track"></div>
           <div class="mdc-switch__thumb-underlay">
             <div class="mdc-switch__thumb">
-              <input type="checkbox" id="wb-refu-origin-switch" class="mdc-switch__native-control" role="switch">
+              <input type="checkbox" class="mdc-switch__native-control" role="switch">
             </div>
           </div>
         </div>
-        <label for="wb-refu-origin-switch">show refugees origin</label>
+        <label for="wb-ref-origin-switch">show refugees origin</label>
       </li>
     </ul>
     <div class="demo-card__title mdc-typography--subtitle1 wb_subtitle">by country</div>

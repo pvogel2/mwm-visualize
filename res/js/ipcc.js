@@ -50,7 +50,7 @@ class IPCC {
       this.updateUI();
       this.element_.style.display = 'block';
       this.slider_.layout();
-      ipcc.loadTempAnomaly(this.structure_.recordDimension.length - 1);
+      this.loadTempAnomaly(this.structure_.recordDimension.length - 1);
     }).catch(function(err) {
       console.log('err', err);
     });
@@ -74,23 +74,6 @@ class IPCC {
       this.renderer.addObject('ipccTextureMap', this.textureMap);
       this.renderer.frame();
     }
-  }
-
-  getColorMap() {
-    return [
-      {step:-10, color: new THREE.Color(0x2908d8)},
-      {step:-5, color: new THREE.Color(0x264dff)},
-      {step:-3, color: new THREE.Color(0x3f9fff)},
-      {step:-1, color: new THREE.Color(0x72daff)},
-      {step:-0.5, color: new THREE.Color(0xaaf8ff)},
-      {step:-0.2, color: new THREE.Color(0xe1fffe)},
-      {step:0, color: new THREE.Color(0xfeffbe)}, // 0
-      {step:0.2, color: new THREE.Color(0xfee099)},
-      {step:0.5, color: new THREE.Color(0xffad71)},
-      {step:1, color: new THREE.Color(0xf86d5d)},
-      {step:3, color: new THREE.Color(0xd92632)},
-      {step:5, color: new THREE.Color(0xa50f22)}
-    ]
   }
 
   hide() {
@@ -117,11 +100,86 @@ class IPCC {
     p.then(
       response => response.json()
     ).then(json => {
-      const texture = createTemperatureInstance(json);
+      const dataTexture = new IPCCThreeDataTexture({
+        data: json,
+        grid: this.getGrid(),
+      });
+
+      const texture = dataTexture.texture;//createTemperatureInstance(json);
+      const year = this.structure_.indexValues[this.timeIndex_];
+ 
       this.updateUI(texture);
+
+      const ipccEvent = new CustomEvent('IPCC:dataTextureLoaded', { detail: {texture, type: 'anomaly', year} });
+      document.dispatchEvent(ipccEvent);
     }).catch(function(err) {
       console.log('err', err);
     });
   }    
 }
+
+class IPCCThreeDataTexture {
+  constructor(config) {
+    this.data = config.data;
+    this.grid = config.grid;
+
+    this.rankAnomalyMap = [
+      {step:-10, color: new THREE.Color(0x2908d8)},
+      {step:-5, color: new THREE.Color(0x264dff)},
+      {step:-3, color: new THREE.Color(0x3f9fff)},
+      {step:-1, color: new THREE.Color(0x72daff)},
+      {step:-0.5, color: new THREE.Color(0xaaf8ff)},
+      {step:-0.2, color: new THREE.Color(0xe1fffe)},
+      {step:0, color: new THREE.Color(0xfeffbe)}, // 0
+      {step:0.2, color: new THREE.Color(0xfee099)},
+      {step:0.5, color: new THREE.Color(0xffad71)},
+      {step:1, color: new THREE.Color(0xf86d5d)},
+      {step:3, color: new THREE.Color(0xd92632)},
+      {step:5, color: new THREE.Color(0xa50f22)}
+    ];
+
+    this.texture = null;
+    this.calculateTexture();
+  }
+
+  calculateTexture() {
+    let totalCount = 0;
+    const blackColor = new THREE.Color( 0x010101);
+
+    const mapData = new Uint8Array(3 * this.grid.longitude.length * this.grid.latitude.length);
+  
+    for (let i_lat = 0; i_lat < this.grid.latitude.length; i_lat++) {
+      for (let i_long = 0; i_long < this.grid.longitude.length; i_long++) {
+         const value = this.data[totalCount];
+
+        if(-1.0000000150474662e+30 === value) {
+          mapData[totalCount * 3] = 255 * blackColor.r;
+          mapData[totalCount * 3 + 1] = 255 * blackColor.g;
+          mapData[totalCount * 3 + 2] = 255 * blackColor.b;
+        } else {
+          const baseColor = this.rankAnomalyMap[0].color;
+          mapData[totalCount * 3] = 255 * baseColor.r;
+          mapData[totalCount * 3 + 1] = 255 * baseColor.g;
+          mapData[totalCount * 3 + 2] = 255 * baseColor.b;
+          const valueMaped = this.rankAnomalyMap.find(m => {
+            return m.step >= value;
+          });
+          if (valueMaped) {
+            mapData[totalCount * 3] = 255 * valueMaped.color.r;
+            mapData[totalCount * 3 + 1] = 255 * valueMaped.color.g;
+            mapData[totalCount * 3 + 2] = 255 * valueMaped.color.b;
+          } else {
+            mapData[totalCount * 3] = 255 * baseColor.r;
+            mapData[totalCount * 3 + 1] = 255 * baseColor.g;
+            mapData[totalCount * 3 + 2] = 255 * baseColor.b;
+          }
+        }
+        totalCount++;
+      }
+    }
+    
+    this.texture = new THREE.DataTexture( mapData, this.grid.longitude.length, this.grid.latitude.length, THREE.RGBFormat, THREE.UnsignedByteTyp, THREE.UVMapping);
+    this.texture.needsUpdate = true;
+  }
+};
 

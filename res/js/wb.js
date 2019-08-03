@@ -2,7 +2,7 @@ var wb = {
   SP_POP_TOTL: 'SP.POP.TOTL',
   SM_POP_REFG: 'SM.POP.REFG',
   SM_POP_REFG_OR: 'SM.POP.REFG.OR',
-  setData: json => {
+  setData: async json => {
     wb.data = json;
     wb.map = {};
     wb.data.forEach(item => {
@@ -14,10 +14,15 @@ var wb = {
   loadRefugees: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG/'),
   loadRefugeesOrigin: () => fetch('/data/worldbank/country/;/indocators/SM.POP.REFG.OR/'),
   loadIndicator: (id, country = ';') => fetch(`/data/worldbank/country/${country}/indocators/${id}/`),
+  loadCountries: () => 
+    fetch('/data/countries')
+      .then(response => response.json())
+      .then(json => {wb.setData(json)}),
   getCountry: index => {
     const data = wb.data[index];
     return (data ? new WBCountry(data) : null);
   },
+  getCountryCount: () => wb.data.length,
 };
 
 /**
@@ -55,14 +60,71 @@ class WBCtrl {
       console.log(`Value changed to ${event.detail.value}`);
       this.updateControls();
       this.updateGraphs();
-      window.updatePopulation();
-      window.updateRefugees();
-      window.updateRefugeesOrigin();
+      this.updateIndicator(wb.SP_POP_TOTL);
+      this.updateIndicator(wb.SM_POP_REFG);
+      this.updateIndicator(wb.SM_POP_REFG_OR);
       }
       this.sliderDoubleEventToggle = !this.sliderDoubleEventToggle;
     });
 
+    this.populationSwitch = new mdc.switchControl.MDCSwitch(this.element_.querySelector('#wb-pop-switch'));
+    this.populationSwitch.nativeControl_.addEventListener('change', this.togglePopulation.bind(this));
+
+    this.refugeesSwitch = new mdc.switchControl.MDCSwitch(this.element_.querySelector('#wb-ref-switch'));
+    this.refugeesSwitch.nativeControl_.addEventListener('change', this.toggleRefugees.bind(this));
+
+    this.refugeesOriginSwitch = new mdc.switchControl.MDCSwitch(this.element_.querySelector('#wb-ref-origin-switch'));
+    this.refugeesOriginSwitch.nativeControl_.addEventListener('change', this.toggleRefugeesOrigin.bind(this));
+
     this.renderer = null;
+  }
+
+  togglePopulation() {
+    if(this.populationSwitch.checked) {
+      this.loadIndicator(wb.SP_POP_TOTL);
+    } else {
+      this.unloadIndicator(wb.SP_POP_TOTL);
+    }
+  }
+
+
+  toggleRefugees() {
+    if(this.refugeesSwitch.checked) {
+      this.loadIndicator(wb.SM_POP_REFG);
+    } else {
+      this.unloadIndicator(wb.SM_POP_REFG);
+    }
+  }
+
+  toggleRefugeesOrigin() {
+    if(this.refugeesOriginSwitch.checked) {
+      this.loadIndicator(wb.SM_POP_REFG_OR);
+    } else {
+      this.unloadIndicator(wb.SM_POP_REFG_OR);
+    }
+  }
+
+  loadIndicator(id) {
+    wb.loadIndicator(id)
+      .then(response => response.json())
+      .then(json => {
+        const wbEvent = new CustomEvent('WB:indicatorLoaded', { detail: {data: json, id: id, year: this.getYear()}});
+        document.dispatchEvent(wbEvent);
+      });
+  }
+
+  unloadIndicator(id) {
+    const wbEvent = new CustomEvent('WB:unloadIndicator', { detail: {id: id}});
+    document.dispatchEvent(wbEvent);
+  }
+
+  updateIndicator(id) {
+    wb.loadIndicator(id)
+      .then(response => response.json())
+      .then(json => {
+        const wbEvent = new CustomEvent('WB:indicatorUpdated', { detail: {data: json, id: id, year: this.getYear()}});
+        document.dispatchEvent(wbEvent);
+      });
   }
 
   getIndicators() {
@@ -249,6 +311,8 @@ class WBCtrl {
     if (event.type === 'click') {
       this.countryFilter_ = this.element_.querySelector('.wb-country-filter input').value;
       this.applyFilter();
+    } else if (event.type ==='change') {
+      console.log(event);
     }
   }
 }
@@ -296,6 +360,23 @@ class WBCountry {
 
   iso2() {
     return this.data.iso2Code;
+  }
+
+  get centroid() {
+    return {
+      lat: Number(this.data.center.latitude),
+      long: Number(this.data.center.longitude)
+    }
+  }
+
+  get capitalCoords() {
+    if (this.data.latitude === "" || this.data.longitude === "") {
+      return null;
+    }
+    return {
+      lat: Number(this.data.latitude),
+      long: Number(this.data.longitude)
+    }
   }
 
   incomeValue() {
@@ -351,6 +432,200 @@ class WBCountry {
       ids.forEach(id => {
         this.extendIndicators(id, WBIndicatorItem.filter(json, iso2Code, id));
       });
+    }
+  }
+}
+
+class WBThreeIndicator extends WorldThreeObject {
+  constructor(config) {
+    super(config);
+
+    this.scale = config.scale;
+    this.year = config.year;
+    this.objId = `${this.id.replace(/\./g, '_')}Blocks`;
+
+    this.offset = {
+        lat: config.lat ? config.lat : 0.0,
+        long: config.long ? config.long : 0.0,
+    }
+
+    this.pillar = new PillarTemplate({color: this.color});
+  }
+
+  async attach(renderer, parent) {
+//  async createWBIndicatorInstances(data, color, scale, year, id, offset) {
+    this.renderer = renderer;
+    const offsets = [];
+    const orientations = [];
+    const values = [];
+    let instanceCounter = 0;
+
+    for (let i = 0; i < this.data.length; i++) {
+      const date = this.data[i];
+      const country = this.findCountry(date);
+
+      let s0;
+      
+      if (country) {
+        s0 = this.calcSphericalFromLatLongRad(
+          Number(country.center.latitude) + this.offset.lat,
+          Number(country.center.longitude) + this.offset.long,
+          20.025
+        );
+        values.push(0.0);
+        values.push(this.scale * date.value || 0.0);
+      } else {
+        //console.log("no country", date.iso2.toLowerCase(), date);
+        continue;
+      }
+   
+      const v0 = new THREE.Vector3().setFromSpherical(s0);
+      v0.toArray(offsets, instanceCounter * 3);
+
+      this.pushOrientationFromSpherical(s0, orientations);
+
+      instanceCounter++;
+    }
+
+    this.pillar.geometry.maxInstancedCount = instanceCounter;
+    this.pillar.geometry.addAttribute( 'offset', new THREE.InstancedBufferAttribute( new Float32Array( offsets ), 3 ) );
+    this.pillar.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( orientations ), 4 ) );
+    this.pillar.geometry.addAttribute( 'value', new THREE.InstancedBufferAttribute( new Float32Array( values ), 2 ) );
+
+    this.mesh = await this.pillar.getMesh(renderer);
+    PillarTemplate.triggerTransition(this.mesh, {
+      target: 1.0,
+    });
+    renderer.addObject(this.objId, this.mesh, false, parent);
+  }
+
+  update(config) {
+    if (!this.mesh) return;
+    this.data = config.data ? config.data : this.data;;
+    this.color = config.color ? config.color : this.color;
+    this.year = config.year ? config.year : this.year;
+
+    let attribIndex = 0;
+    for (let i = 0; i < this.data.length; i++) {
+      const date = this.data[i];
+      const country = this.findCountry(date);
+
+      if (country) {
+        const newIdx = this.mesh.material.uniforms.weight.value >= 1.0 ? attribIndex * 2 : attribIndex * 2 + 1;
+        this.mesh.geometry.attributes.value.array[newIdx] = this.scale * date.value || 0.0;//(200000000.0 + mesh.material.uniforms.weight.value * 200000000.0);//date.value || 0.0;
+        attribIndex++;
+      } else {
+        //console.log("no wb_Country", date.iso2.toLowerCase(), date);
+        continue;
+      }
+    }
+    this.mesh.geometry.attributes.value.needsUpdate = true;
+    PillarTemplate.triggerTransition(this.mesh, {
+      target: (this.mesh.material.uniforms.weight.value >= 1.0 ? 0.0 : 1.0),
+    });
+  }
+
+  findCountry(date) {
+    return (Number(date.date) === this.year && date.indicator.id === this.id
+      ? wb.map[date.country.id.toLowerCase()]
+      : null);
+  }
+}
+
+class WBThreeCountries extends WorldThreeObject {
+  constructor(config) {
+    super(config);
+
+    this.capitalsObjId = 'WBThreeCountryCapitals';
+    this.centersObjId = 'WBThreeCountryCentroids';
+
+    this.capitals = new CityTemplate();
+    this.centroidsPoints = null;
+    this.capitalsMesh = null;
+  }
+
+  async attach(renderer, parent) {
+    this.renderer = renderer;
+  //async function createWBCountryProps(parent, color) {
+    const data = this.data;
+    const p_uniforms = {
+        texture:   { type: "t", value: renderer.getTexture( "disc.png" ) },
+    };
+    p_uniforms.texture.value.wrapS = p_uniforms.texture.value.wrapT = THREE.RepeatWrapping;
+
+    var p_material = new THREE.ShaderMaterial( {
+      uniforms: p_uniforms,
+      depthWrite: false,
+      transparent: true,
+      vertexShader:   document.getElementById( 'vertexshader' ).textContent,
+      fragmentShader: document.getElementById( 'fragmentshader' ).textContent
+    });
+
+    const countryCount = wb.getCountryCount();
+
+    var p_geometry = new THREE.BufferGeometry();
+    var p_positions = new Float32Array( countryCount * 3 );
+    var p_colors = new Float32Array( countryCount * 3 );
+    var p_sizes = new Float32Array(  countryCount );
+
+    var pointColor = new THREE.Color( 1, 0, 0);
+
+    const cap_colors = [];
+    const cap_offsets = [];
+
+    const cap_color = new THREE.Color(this.color);
+    const cap_orientations = [];
+    const cap_scales = [];
+    let cap_counter = 0;
+    
+    for (let i = 0; i < countryCount ; i++) {
+        const country = wb.getCountry(i);
+        const center = country.centroid;
+        /*capital*/
+        const capitalCoords = country.capitalCoords;
+        if (capitalCoords) {
+          const cap_s0 = this.calcSphericalFromLatLongRad(capitalCoords.lat, capitalCoords.long, 20.025);
+          const cap_v0 = new THREE.Vector3().setFromSpherical(cap_s0);
+
+          cap_v0.toArray(cap_offsets, cap_counter * 3);
+          this.pushOrientationFromSpherical(cap_s0, cap_orientations);
+          cap_scales.push(1.5);
+          cap_color.toArray(cap_colors, cap_counter * 3);
+          cap_counter++;
+        }
+        /*-------*/
+
+        const s0 = this.calcSphericalFromLatLongRad(center.lat, center.long, 20.025);
+        const v0 = new THREE.Vector3().setFromSpherical(s0);
+
+        v0.toArray(p_positions, i * 3);
+        pointColor.toArray( p_colors, i * 3);
+        p_sizes[i] = 200;
+    }
+
+    p_geometry.addAttribute( 'position', new THREE.BufferAttribute( p_positions, 3 ));
+    p_geometry.addAttribute( 'size', new THREE.BufferAttribute( p_sizes, 1 ));
+    p_geometry.addAttribute( 'color', new THREE.BufferAttribute( p_colors, 3 ));
+
+    this.centroidsPoints = new THREE.Points( p_geometry, p_material );
+    renderer.addObject( this.centroidsObjId, this.centroidsPoints , true, parent);
+
+    this.capitals.geometry.maxInstancedCount = cap_counter;
+    this.capitals.geometry.addAttribute( 'scale', new THREE.InstancedBufferAttribute( new Float32Array( cap_scales ), 1 ) );
+    this.capitals.geometry.addAttribute( 'color', new THREE.InstancedBufferAttribute( new Float32Array( cap_colors ), 3 ) );
+    this.capitals.geometry.addAttribute( 'offset', new THREE.InstancedBufferAttribute( new Float32Array( cap_offsets ), 3 ) );
+    this.capitals.geometry.addAttribute( 'orientation', new THREE.InstancedBufferAttribute( new Float32Array( cap_orientations ), 4 ) );
+
+    this.capitalsMesh = await this.capitals.getMesh(renderer);
+    renderer.addObject(this.capitalsObjId, this.capitalsMesh, false, parent);
+  }
+
+  detach() {
+    if (this.renderer) {
+      this.renderer.removeObject(this.centroidsObjId);
+      this.renderer.removeObject(this.capitalsObjId);
+    } else {
+      console.log('WBThreeIndicator: renderer not defined.');
     }
   }
 }
